@@ -1,0 +1,16 @@
+[Unit]
+Description=Create AP manager Service
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ap_manager.sh start --config /etc/ap_manager/conf/config.json
+ExecStop=/usr/bin/ap_manager.sh stop
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target
