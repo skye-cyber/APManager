@@ -10,6 +10,8 @@ from .signals import SignalHandler
 class CleanupManager(SignalHandler):
     def __init__(self, ap_man):
         # Ap man config
+        super().__init__()
+
         self.ap_man = ap_man
         self.lock = self.ap_man.lock
         self.config = ap_man.config
@@ -37,19 +39,34 @@ class CleanupManager(SignalHandler):
         self.route_addrs = self.config.get('route_addrs', [])
         self.haveged_watchdog_pid = self.config.get('haveged_watchdog_pid', '')
 
+    def kill_processes(self):
+        # Kill processes from PID files
+        if os.path.exists(self.proc_dir):
+            for pid_file in os.listdir(self.proc_dir):
+                try:
+                    if pid_file.endswith('.pid'):
+                        pid_path = os.path.join(self.proc_dir, pid_file)
+                        with open(pid_path, 'r') as f:
+                            pid = int(f.read().strip())
+                        # print("Kill:", pid)
+                        os.kill(pid, signal.SIGKILL) if pid and pid != os.getpid() else None
+                except (IOError, ValueError, OSError):
+                    pass
+                finally:
+                    # remove the pid file
+                    os.remove(pid_path)
+
     def _cleanup(self):
         """Internal cleanup function that performs all cleanup operations."""
-        # Disable signal handling during cleanup
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        signal.signal(signal.SIGUSR1, signal.SIG_IGN)
-        signal.signal(signal.SIGUSR2, signal.SIG_IGN)
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
-
+        # try:
         self.lock.mutex_lock()
+        # except Exception:
+        # self.kill_processes()
+        # print(e)
 
         try:
             # Disown all child processes
-            subprocess.run(['disown', '-a'], shell=True)
+            # subprocess.run(['disown', '-a'], shell=True)
 
             # Kill haveged_watchdog if running
             if self.haveged_watchdog_pid:
@@ -58,26 +75,15 @@ class CleanupManager(SignalHandler):
                 except (OSError, ValueError):
                     pass
 
-            # Kill processes from PID files
-            if os.path.exists(self.proc_dir):
-                for pid_file in os.listdir(self.proc_dir):
-                    if pid_file.endswith('.pid'):
-                        pid_path = os.path.join(self.proc_dir, pid_file)
-                        try:
-                            with open(pid_path, 'r') as f:
-                                pid = int(f.read().strip())
-                            os.kill(pid, signal.SIGKILL) if pid else None
-                            # remove the pid file
-                            os.remove(pid_path)
-                        except (IOError, ValueError, OSError):
-                            pass
+                self.kill_processes()
 
                 # Remove the proccesses directory
                 # shutil.rmtree(self.proc_dir, ignore_errors=True)
 
             # Check if we're the last instance using this internet interface
             found = False
-            for conf_dir in self.list_running_conf():
+
+            for conf_dir in self.ap_man.list_running_conf():
                 nat_internet_iface_path = os.path.join(conf_dir, 'nat_internet_iface')
                 if os.path.exists(nat_internet_iface_path):
                     with open(nat_internet_iface_path, 'r') as f:
@@ -86,27 +92,21 @@ class CleanupManager(SignalHandler):
                             break
 
             if not found and self.internet_iface:
-                # Restore original forwarding setting
-                forwarding_file = os.path.join(self.conf_dir, f"{self.internet_iface}_forwarding")
-                # if os.path.exists(forwarding_file):
-                with open(forwarding_file, 'r') as src, open(f"/proc/sys/net/ipv4/conf/{self.internet_iface}/forwarding", 'w') as dst:
-                    shutil.copyfileobj(src, dst)
-                    os.remove(forwarding_file)
+                try:
+                    # Restore original forwarding setting
+                    forwarding_file = os.path.join(self.conf_dir, f"{self.internet_iface}_forwarding")
+                    # if os.path.exists(forwarding_file):
+                    with open(forwarding_file, 'r') as src, open(f"/proc/sys/net/ipv4/conf/{self.internet_iface}/forwarding", 'w') as dst:
+                        shutil.copyfileobj(src, dst)
+                        os.unlink(forwarding_file)
+                        # shutil.rmtree(forwarding_file)
+                except Exception:
+                    pass
 
             # If we're the last instance, restore common settings
             if not self.has_running_instance():
                 # Kill common processes
-                if os.path.exists(self.proc_dir):
-                    for pid_file in os.listdir(self.proc_dir):
-                        if pid_file.endswith('.pid'):
-                            pid_path = os.path.join(self.conf_dir, pid_file)
-                            try:
-                                with open(pid_path, 'r') as f:
-                                    pid = int(f.read().strip())
-                                os.kill(pid, signal.SIGKILL)
-                                os.remove(pid_file)
-                            except (IOError, ValueError, OSError):
-                                pass
+                self.kill_processes()
 
                 # Restore original ip_forward setting
                 ip_forward_file = os.path.join(self.conf_dir, 'ip_forward')
@@ -227,9 +227,12 @@ class CleanupManager(SignalHandler):
                     subprocess.run(['ip', 'link', 'set', 'dev', self.wifi_iface, 'address', self.old_macaddr], check=False)
                 self.networkmanager_rm_unmanaged_if_needed(self.wifi_iface, self.old_macaddr)
 
+        except Exception as e:
+            print(e)
+
         finally:
             self.lock.mutex_unlock()
-            self.cleanup_lock()
+            self.lock.cleanup_lock()
 
             # Remove daemon PID file if running as daemon
             if self.running_as_daemon and self.daemon_pidfile and os.path.exists(self.daemon_pidfile):
@@ -237,7 +240,7 @@ class CleanupManager(SignalHandler):
 
     def cleanup(self):
         """Public cleanup function that provides user feedback."""
-        print("\nDoing cleanup...", end=' ', flush=True)
+        print("\nDoing cleanup...", end='\r', flush=True)
         self._cleanup()
         print("done")
 
@@ -259,7 +262,7 @@ class CleanupManager(SignalHandler):
 
     def has_running_instance(self) -> bool:
         """Check if there are any running instances."""
-        return len(self.list_running_conf()) > 0
+        return len(self.ap_man.list_running_conf()) > 0
 
     def _is_bridge_interface_(self, iface: str) -> bool:
         """Check if an interface is a bridge interface."""

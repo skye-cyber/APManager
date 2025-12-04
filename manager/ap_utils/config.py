@@ -37,8 +37,9 @@ class ConfigManager:
         with open(self.config_file, 'w') as f:
             json.dump(self.config, f, indent=2)
 
-    def save_config(self):
+    def save_config(self, config: dict):
         """Save configuration to file"""
+        self.config = config if config else self.config
         with open(self.config_file, 'w') as f:
             json.dump(self.config, f, indent=2)
 

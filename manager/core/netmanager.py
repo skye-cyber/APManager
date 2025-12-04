@@ -3,7 +3,7 @@ import re
 import subprocess
 import time
 from typing import Optional
-from lock import lock
+from .lock import lock
 
 
 class NetworkManager:
@@ -348,3 +348,8 @@ class NetworkManager:
             time.sleep(1)
 
         return False
+
+    def is_interface(self, iface=None):
+        """Check if interface exists"""
+        iface = iface if iface else self.config['wifi_iface']
+        return os.path.exists(f"/sys/class/net/{iface}")

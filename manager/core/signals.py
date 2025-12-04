@@ -5,7 +5,7 @@ from typing import Optional
 
 
 class SignalHandler:
-    def __init__(self, config):
+    def __init__(self):
         self.setup_signal_handlers()
 
     def setup_signal_handlers(self):
@@ -14,15 +14,17 @@ class SignalHandler:
         signal.signal(signal.SIGINT, self.handle_signal)
         signal.signal(signal.SIGUSR1, self.handle_signal)
         signal.signal(signal.SIGUSR2, self.handle_signal)
+        # signal.signal(signal.SIGTERM, self.handle_signal)
 
         # Store original signal handlers for cleanup
         self.original_sigint_handler = signal.getsignal(signal.SIGINT)
         self.original_sigusr1_handler = signal.getsignal(signal.SIGUSR1)
         self.original_sigusr2_handler = signal.getsignal(signal.SIGUSR2)
+        # self.original_sigterm_handler = signal.getsignal(signal.SIGTERM)
 
     def handle_signal(self, signum, frame):
         """Handle signals received by the application."""
-        if signum == signal.SIGINT or signum == signal.SIGUSR1:
+        if signum in (signal.SIGINT, signal.SIGTERM, signal.SIGUSR1):
             self.clean_exit()
         elif signum == signal.SIGUSR2:
             self.die()
@@ -39,13 +41,24 @@ class SignalHandler:
         if os.getpid() != os.getppid():
             os.kill(os.getppid(), signal.SIGUSR2)
 
+        # Disable signal handling during cleanup
+        # signal.signal(self.original_sigint_handler, signal.SIG_IGN)
+        # signal.signal(self.original_sigusr1_handler1, signal.SIG_IGN)
+        # signal.signal(self.original_sigusr2_handler, signal.SIG_IGN)
+
+        signal.signal(self.original_sigint_handler, signal.SIGINT)
+        signal.signal(self.original_sigusr1_handler1, signal.SIGUSR1)
+        signal.signal(self.original_sigusr2_handler, signal.SIGUSR2)
+        # signal.signal(self.original_sigterm_handler, signal.SIGTERM)
+
+        # Perform cleanup
+        self.cleanup()
+
         # Restore original signal handlers
         signal.signal(signal.SIGINT, self.original_sigint_handler)
         signal.signal(signal.SIGUSR1, self.original_sigusr1_handler)
         signal.signal(signal.SIGUSR2, self.original_sigusr2_handler)
-
-        # Perform cleanup
-        self.cleanup()
+        signal.signal(signal.SIGTERM, self.original_sigterm_handler)
 
         # Exit with success status
         sys.exit(0)
@@ -63,6 +76,7 @@ class SignalHandler:
         signal.signal(signal.SIGINT, self.original_sigint_handler)
         signal.signal(signal.SIGUSR1, self.original_sigusr1_handler)
         signal.signal(signal.SIGUSR2, self.original_sigusr2_handler)
+        # signal.signal(signal.SIGTERM, self.original_sigterm_handler)
 
         # Perform cleanup
         self.cleanup()

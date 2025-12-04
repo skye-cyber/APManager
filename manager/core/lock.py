@@ -5,7 +5,7 @@ import fcntl
 class LockManager:
     def __init__(self):
         self.LOCK_FILE = "/tmp/create_ap.all.lock"
-        self.COUNTER_LOCK_FILE = f"/tmp/create_ap.{os.getpid()}.lock"
+        self.COUNTER_LOCK_FILE = f"/tmp/ap_manager.{os.getpid()}.lock"
         self.lock_fd = None
         self.counter_mutex_fd = None
 
@@ -45,7 +45,6 @@ class LockManager:
         """Get an unused file descriptor"""
         max_fds = os.sysconf('SC_OPEN_MAX')
         pid = os.getpid()
-
         for x in range(3, max_fds):  # Start from 3 to skip stdin, stdout, stderr
             if not os.path.exists(f"/proc/{pid}/fd/{x}"):
                 return x

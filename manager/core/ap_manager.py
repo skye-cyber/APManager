@@ -106,16 +106,21 @@ class ApManager:
 
             forwarding_src = f"/proc/sys/net/ipv4/conf/{self.config['internet_iface']}/forwarding"
             forwarding_dst = os.path.join(self.conf_dir, f"{self.config['internet_iface']}_forwarding")
+            with open(forwarding_dst, 'w') as f:
+                f.write(' ')
+
             cp_n_safe(forwarding_src, forwarding_dst)
 
             ip_forward_src = "/proc/sys/net/ipv4/ip_forward"
             ip_forward_dst = os.path.join(self.conf_dir, 'ip_forward')
             cp_n_safe(ip_forward_src, ip_forward_dst)
 
+            bridge_src = '/proc/sys/net/bridge/bridge-nf-call-iptables'
+
             if os.path.exists('/proc/sys/net/bridge/bridge-nf-call-iptables'):
-                bridge_src = '/proc/sys/net/bridge/bridge-nf-call-iptables'
                 bridge_dst = os.path.join(self.conf_dir, 'bridge-nf-call-iptables')
-            cp_n_safe(bridge_src, bridge_dst)
+
+                cp_n_safe(bridge_src, bridge_dst)
 
             # Unlock mutex
             self.lock.mutex_unlock()
@@ -155,8 +160,8 @@ class ApManager:
 
             # Update and save configuration
             try:
-                self.config_manager.update_config(self.config)
-                self.config_manager.save_config()
+                # self.config_manager._dict_update(self.config)
+                self.config_manager.save_config(self.config)
             except Exception as e:
                 self.clean.die(f"Failed to update configuration: {str(e)}")
 
@@ -219,6 +224,7 @@ class ApManager:
             self.clean.clean_exit("Success")
 
         except Exception as e:
+            raise
             self.clean.die(f"Initialization failed: {str(e)}")
 
     def start_ap(self):
@@ -818,7 +824,7 @@ class ApManager:
             # Create the virtual interface
             result = subprocess.run(
                 ['iw', 'dev', self.config['wifi_iface'], 'interface', 'add',
-                self.config['vwifi_iface'], 'type', '__ap'],
+                 self.config['vwifi_iface'], 'type', '__ap'],
                 check=True, capture_output=True, text=True
             )
 
