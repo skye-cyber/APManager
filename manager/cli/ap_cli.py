@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 import argparse
 import sys
 import re
@@ -7,6 +7,7 @@ from ..core.ap_manager import ApManager
 from ..ap_utils.config import config_manager, ConfigManager
 import getpass
 from typing import Union
+from ..ap_utils.privilege import require_network_privileges
 
 version = "1.0.0"
 
@@ -39,6 +40,7 @@ def config_update(args):
         return False
 
 
+@require_network_privileges
 def argsdev():
     parser = argparse.ArgumentParser(description='Custom AP Manager')
     parser.add_argument('--action', default='start', choices=['start', 'stop', 'status', 'configure', 'interfaces'], help='Action to perform')

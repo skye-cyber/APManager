@@ -1,5 +1,35 @@
 import os
 from setuptools import find_namespace_packages, setup
+import shutil
+import sys
+import subprocess
+from pathlib import Path
+
+
+def setup_capabilities():
+    """Try to set up Linux capabilities for network operations."""
+    if not sys.platform.startswith('linux'):
+        return False
+
+    # Find the main script
+    script_path = Path(__file__).parent / "ap_manager.py"
+
+    if not script_path.exists():
+        return False
+
+    # Check if setcap is available
+    if shutil.which('setcap'):
+        try:
+            subprocess.run([
+                'sudo', 'setcap', 'cap_net_admin,cap_net_raw+ep',
+                str(script_path.absolute())
+            ], check=True)
+            print("✓ Granted network capabilities to script")
+            return True
+        except subprocess.CalledProcessError:
+            print("Note: Could not set capabilities, will use sudo instead")
+
+    return False
 
 
 DESCRIPTION = "CLI toolkit for converting text to audio."

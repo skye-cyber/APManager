@@ -18,6 +18,7 @@ from .lock import lock
 from .netmanager import NetworkManager
 from .cleanup import CleanupManager
 from ..ap_utils.copy import cp_n_safe
+from ..ap_utils.privilege import NetworkPrivileges
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -822,15 +823,12 @@ class ApManager:
 
         try:
             # Create the virtual interface
-            result = subprocess.run(
-                ['iw', 'dev', self.config['wifi_iface'], 'interface', 'add',
-                 self.config['vwifi_iface'], 'type', '__ap'],
-                check=True, capture_output=True, text=True
-            )
+            with NetworkPrivileges() as priv:
+                result = priv.run_command(['iw', 'dev', self.config['wifi_iface'], 'interface', 'add', self.config['vwifi_iface'], 'type', '__ap'], check=True, capture_output=True, text=True)
 
-            if result.returncode != 0:
-                self.config['vwifi_iface'] = None
-                self.clean.die(self.virt_diems)
+                if result.returncode != 0:
+                    self.config['vwifi_iface'] = None
+                    self.clean.die(self.virt_diems)
 
             # Wait for NetworkManager to recognize the interface if needed
             if (self.netmanager.networkmanager_is_running() and self.netmanager.NM_OLDER_VERSION == 0):

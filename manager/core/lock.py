@@ -1,11 +1,12 @@
 import os
+import sys
 import fcntl
 import atexit
 
 
 class LockManager:
     def __init__(self):
-        self.LOCK_FILE = "/tmp/create_ap.all.lock"
+        self.LOCK_FILE = "/tmp/ap_manager.all.lock"
         self.COUNTER_LOCK_FILE = f"/tmp/ap_manager.{os.getpid()}.lock"
         self.lock_fd = None
         self.counter_lock_fd = None
@@ -51,7 +52,8 @@ class LockManager:
 
             return True
         except Exception as e:
-            print(f"Initialization error: {e}")
+            print(f"Lock init failure: {e}")
+            sys.exit(1)
             return False
         finally:
             os.umask(old_umask)
