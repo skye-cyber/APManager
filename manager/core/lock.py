@@ -1,5 +1,6 @@
 import os
 import fcntl
+import atexit
 
 
 class LockManager:
@@ -7,138 +8,160 @@ class LockManager:
         self.LOCK_FILE = "/tmp/create_ap.all.lock"
         self.COUNTER_LOCK_FILE = f"/tmp/ap_manager.{os.getpid()}.lock"
         self.lock_fd = None
-        self.counter_mutex_fd = None
+        self.counter_lock_fd = None
+
+        # Initialize on creation
+        if not self.__init_lock__():
+            print("Failed to initialize lock manager")
+
+        # Clean up on exit
+        atexit.register(self.cleanup_lock)
 
     def __init_lock__(self):
         """Initialize the lock file with proper permissions"""
-        # Set umask to allow all users to write to the lock file
-        old_umask = os.umask(0o0555)
+        old_umask = os.umask(0o022)  # Allow group/other read, only owner write
 
-        # Clean up any existing lock
-        self.cleanup_lock()
-
-        # Get an available file descriptor
-        self.lock_fd = self.get_avail_fd()
-        if self.lock_fd is None:
-            return False
-
-        # Open/create lock file
         try:
-            # Open the file with write access
-            self.lock_fd = os.open(self.LOCK_FILE, os.O_RDWR | os.O_CREAT, 0o666)
+            # Clean up any existing counter lock for this process
+            self.cleanup_counter_lock()
 
-            # Change ownership to root if we're not root
-            if os.geteuid() != 0:
-                os.chown(self.LOCK_FILE, 0, 0)
+            # Open/create the global lock file
+            try:
+                # Try to open existing file
+                self.lock_fd = os.open(self.LOCK_FILE, os.O_RDWR)
+            except FileNotFoundError:
+                # Create if doesn't exist
+                self.lock_fd = os.open(self.LOCK_FILE, os.O_RDWR | os.O_CREAT, 0o644)
+                # Set owner to root if not root
+                if os.geteuid() != 0:
+                    try:
+                        os.chown(self.LOCK_FILE, 0, 0)
+                    except PermissionError:
+                        pass  # Ignore if we can't chown
 
-            # Create mutex counter lock file
-            with open(self.COUNTER_LOCK_FILE, 'w') as f:
-                f.write('0')
+            # Create counter lock file for this process
+            self.counter_lock_fd = os.open(
+                self.COUNTER_LOCK_FILE,
+                os.O_RDWR | os.O_CREAT | os.O_TRUNC,
+                0o644
+            )
+            # Initialize counter to 0
+            os.write(self.counter_lock_fd, b'0')
+            os.lseek(self.counter_lock_fd, 0, os.SEEK_SET)
 
-            # Restore original umask
-            os.umask(old_umask)
             return True
-        except OSError:
+        except Exception as e:
+            print(f"Initialization error: {e}")
             return False
+        finally:
+            os.umask(old_umask)
 
-    def get_avail_fd(self):
-        """Get an unused file descriptor"""
-        max_fds = os.sysconf('SC_OPEN_MAX')
-        pid = os.getpid()
-        for x in range(3, max_fds):  # Start from 3 to skip stdin, stdout, stderr
-            if not os.path.exists(f"/proc/{pid}/fd/{x}"):
-                return x
-
-        return None  # Return None if no available FD found
-
-    def cleanup_lock(self):
-        """Clean up the lock files"""
+    def cleanup_counter_lock(self):
+        """Clean up only the counter lock file for this process"""
         try:
             if os.path.exists(self.COUNTER_LOCK_FILE):
                 os.remove(self.COUNTER_LOCK_FILE)
         except OSError:
             pass
 
+    def cleanup_lock(self):
+        """Clean up all lock files"""
+        self.cleanup_counter_lock()
+
+        # Only clean global lock if we're the last process
+        try:
+            if self.lock_fd is not None:
+                os.close(self.lock_fd)
+            # Note: Don't remove global lock file as other processes may be using it
+        except OSError:
+            pass
+
     def mutex_lock(self):
         """Recursive mutex lock for all processes"""
-        # Get a file descriptor for the counter lock
-        self.counter_mutex_fd = self.get_avail_fd()
-        if self.counter_mutex_fd is None:
-            print("Failed to lock mutex counter")
+        if self.counter_lock_fd is None or self.lock_fd is None:
+            print("Lock not initialized")
             return False
 
         try:
-            # Open the counter lock file
-            counter_fd = os.open(self.COUNTER_LOCK_FILE, os.O_RDWR)
+            # Lock the counter file for this process
+            fcntl.flock(self.counter_lock_fd, fcntl.LOCK_EX)
 
-            # Lock the file
-            fcntl.flock(counter_fd, fcntl.LOCK_EX)
+            # Read current counter value
+            os.lseek(self.counter_lock_fd, 0, os.SEEK_SET)
+            data = os.read(self.counter_lock_fd, 10)
+            counter = int(data.decode().strip()) if data else 0
 
-            # Read the current counter value
-            os.lseek(counter_fd, 0, os.SEEK_SET)
-            counter = int(os.read(counter_fd, 1024).decode().strip())
-
-            # Lock the global mutex if this is the first lock
+            # Lock global mutex if this is the first lock
             if counter == 0:
                 fcntl.flock(self.lock_fd, fcntl.LOCK_EX)
 
-            # Increment the counter
+            # Increment counter
             counter += 1
 
-            # Write the new counter value
-            os.lseek(counter_fd, 0, os.SEEK_SET)
-            os.ftruncate(counter_fd, 0)
-            os.write(counter_fd, str(counter).encode())
+            # Write back new counter value
+            os.lseek(self.counter_lock_fd, 0, os.SEEK_SET)
+            os.write(self.counter_lock_fd, str(counter).encode())
+            os.fsync(self.counter_lock_fd)
 
-            # Unlock the counter file
-            fcntl.flock(counter_fd, fcntl.LOCK_UN)
-            os.close(counter_fd)
+            # Unlock counter file (we keep global lock if counter > 0)
+            fcntl.flock(self.counter_lock_fd, fcntl.LOCK_UN)
 
             return True
-        except (OSError, ValueError):
-            print("Failed to lock mutex counter")
+        except Exception as e:
+            print(f"Failed to lock mutex: {e}")
             return False
 
     def mutex_unlock(self):
         """Recursive mutex unlock for all processes"""
-        # Get a file descriptor for the counter lock
-        self.counter_mutex_fd = self.get_avail_fd()
-        if self.counter_mutex_fd is None:
-            print("Failed to lock mutex counter")
+        if self.counter_lock_fd is None or self.lock_fd is None:
+            print("Lock not initialized")
             return False
 
         try:
-            # Open the counter lock file
-            counter_fd = os.open(self.COUNTER_LOCK_FILE, os.O_RDWR)
+            # Lock the counter file for this process
+            fcntl.flock(self.counter_lock_fd, fcntl.LOCK_EX)
 
-            # Lock the file
-            fcntl.flock(counter_fd, fcntl.LOCK_EX)
+            # Read current counter value
+            os.lseek(self.counter_lock_fd, 0, os.SEEK_SET)
+            data = os.read(self.counter_lock_fd, 10)
+            counter = int(data.decode().strip()) if data else 0
 
-            # Read the current counter value
-            os.lseek(counter_fd, 0, os.SEEK_SET)
-            counter = int(os.read(counter_fd, 1024).decode().strip())
-
-            # Decrement the counter if it's positive
+            # Decrement counter if positive
             if counter > 0:
                 counter -= 1
 
-                # Unlock the global mutex if this is the last unlock
+                # Unlock global mutex if this is the last unlock
                 if counter == 0:
                     fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
 
-            # Write the new counter value
-            os.lseek(counter_fd, 0, os.SEEK_SET)
-            os.ftruncate(counter_fd, 0)
-            os.write(counter_fd, str(counter).encode())
+            # Write back new counter value
+            os.lseek(self.counter_lock_fd, 0, os.SEEK_SET)
+            os.write(self.counter_lock_fd, str(counter).encode())
+            os.fsync(self.counter_lock_fd)
 
-            # Unlock the counter file
-            fcntl.flock(counter_fd, fcntl.LOCK_UN)
-            os.close(counter_fd)
+            # Unlock counter file
+            fcntl.flock(self.counter_lock_fd, fcntl.LOCK_UN)
 
             return True
-        except (OSError, ValueError):
-            print("Failed to lock mutex counter")
+        except Exception as e:
+            print(f"Failed to unlock mutex: {e}")
             return False
 
 
 lock = LockManager()
+
+
+# Example usage
+if __name__ == "__main__":
+    lock = LockManager()
+
+    if lock.mutex_lock():
+        print("Successfully locked mutex")
+        # Do your critical section work here
+
+        if lock.mutex_unlock():
+            print("Successfully unlocked mutex")
+        else:
+            print("Failed to unlock mutex")
+    else:
+        print("Failed to lock mutex")

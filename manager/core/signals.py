@@ -6,61 +6,42 @@ from typing import Optional
 
 class SignalHandler:
     def __init__(self):
+        self.original_handlers = {}
         self.setup_signal_handlers()
 
     def setup_signal_handlers(self):
         """Setup signal handlers for the application."""
-        # Register signal handlers
-        signal.signal(signal.SIGINT, self.handle_signal)
-        signal.signal(signal.SIGUSR1, self.handle_signal)
-        signal.signal(signal.SIGUSR2, self.handle_signal)
-        # signal.signal(signal.SIGTERM, self.handle_signal)
+        signals = {
+            signal.SIGINT: self.handle_signal,
+            signal.SIGUSR1: self.handle_signal,
+            signal.SIGUSR2: self.handle_signal
+        }
 
-        # Store original signal handlers for cleanup
-        self.original_sigint_handler = signal.getsignal(signal.SIGINT)
-        self.original_sigusr1_handler = signal.getsignal(signal.SIGUSR1)
-        self.original_sigusr2_handler = signal.getsignal(signal.SIGUSR2)
-        # self.original_sigterm_handler = signal.getsignal(signal.SIGTERM)
+        for sig, handler in signals.items():
+            self.original_handlers[sig] = signal.getsignal(sig)
+            signal.signal(sig, handler)
 
     def handle_signal(self, signum, frame):
         """Handle signals received by the application."""
-        if signum in (signal.SIGINT, signal.SIGTERM, signal.SIGUSR1):
+        if signum in (signal.SIGINT, signal.SIGUSR1):
             self.clean_exit()
         elif signum == signal.SIGUSR2:
             self.die()
 
     def cleanup(self):
-        """To be implemented"""
+        """Perform cleanup operations."""
+        pass  # Implement cleanup logic
 
     def clean_exit(self, message: Optional[str] = None):
         """Handle clean exits."""
         if message:
             print(message)
 
-        # Send die signal to the main process if not the main process
         if os.getpid() != os.getppid():
             os.kill(os.getppid(), signal.SIGUSR2)
 
-        # Disable signal handling during cleanup
-        # signal.signal(self.original_sigint_handler, signal.SIG_IGN)
-        # signal.signal(self.original_sigusr1_handler1, signal.SIG_IGN)
-        # signal.signal(self.original_sigusr2_handler, signal.SIG_IGN)
-
-        signal.signal(self.original_sigint_handler, signal.SIGINT)
-        signal.signal(self.original_sigusr1_handler1, signal.SIGUSR1)
-        signal.signal(self.original_sigusr2_handler, signal.SIGUSR2)
-        # signal.signal(self.original_sigterm_handler, signal.SIGTERM)
-
-        # Perform cleanup
+        self.restore_handlers()
         self.cleanup()
-
-        # Restore original signal handlers
-        signal.signal(signal.SIGINT, self.original_sigint_handler)
-        signal.signal(signal.SIGUSR1, self.original_sigusr1_handler)
-        signal.signal(signal.SIGUSR2, self.original_sigusr2_handler)
-        signal.signal(signal.SIGTERM, self.original_sigterm_handler)
-
-        # Exit with success status
         sys.exit(0)
 
     def die(self, message: Optional[str] = None):
@@ -68,18 +49,14 @@ class SignalHandler:
         if message:
             print(f"\nERROR: {message}\n", file=sys.stderr)
 
-        # Send die signal to the main process if not the main process
         if os.getpid() != os.getppid():
             pass  # os.kill(os.getppid(), signal.SIGUSR2)
 
-        # Restore original signal handlers
-        signal.signal(signal.SIGINT, self.original_sigint_handler)
-        signal.signal(signal.SIGUSR1, self.original_sigusr1_handler)
-        signal.signal(signal.SIGUSR2, self.original_sigusr2_handler)
-        # signal.signal(signal.SIGTERM, self.original_sigterm_handler)
-
-        # Perform cleanup
+        self.restore_handlers()
         self.cleanup()
-
-        # Exit with error status
         sys.exit(1)
+
+    def restore_handlers(self):
+        """Restore original signal handlers."""
+        for sig, handler in self.original_handlers.items():
+            signal.signal(sig, handler)
