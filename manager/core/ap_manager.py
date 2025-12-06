@@ -831,7 +831,7 @@ class ApManager:
             # result = subprocess.run(['iw', 'dev', self.config['wifi_iface'], 'interface', 'add', self.config['vwifi_iface'], 'type', '__ap'], check=True, capture_output=True, text=True)
             print(result)
 
-            if result.returncode != 0:
+            if result['returncode'] != 0:
                 self.config['vwifi_iface'] = None
                 self.clean.die(self.virt_diems)
 

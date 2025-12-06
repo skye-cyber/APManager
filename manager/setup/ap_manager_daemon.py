@@ -49,11 +49,13 @@ class APManagerDaemon:
             'systemctl': ['systemctl'],
         }
 
+        logger.info(f"X: {command}--{args}")
         if command not in allowed_commands.keys():
             return {"success": False, "error": f"Command not allowed: {command}"}
 
         try:
-            cmd = allowed_commands[command] + args
+            cmd = command + args
+            logger.info(f"CMD: {command} - {args}")
             logger.info(f"Executing: {' '.join(cmd)}")
 
             result = subprocess.run(
@@ -122,7 +124,9 @@ class APManagerDaemon:
 
             logger.info(f"Processing request {request_id}: {command}")
 
+            # response = self.exec(command, args) if type(command) is list and type(args) is str else
             response = self.run_command(command, args)
+
             response['request_id'] = request_id
 
             conn.send(json.dumps(response).encode('utf-8'))
@@ -136,16 +140,49 @@ class APManagerDaemon:
         finally:
             conn.close()
 
+    def _start_(self):
+        # Remove old socket check and cleanup
+        # Systemd will handle socket creation and cleanup
+
+        # Just bind to the existing socket
+        self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.socket.bind(self.SOCKET_PATH)
+        self.socket.listen(5)
+
+        # Set permissions (though systemd already did this)
+        try:
+            os.chmod(self.SOCKET_PATH, 0o660)
+            os.chown(self.SOCKET_PATH, 0, os.getgid())
+        except OSError:
+            pass  # Socket might be in use by systemd
+
+        logger.info(f"Daemon started, listening on {self.SOCKET_PATH}")
+
+        while self.running:
+            try:
+                conn, addr = self.socket.accept()
+                thread = threading.Thread(
+                    target=self.handle_client,
+                    args=(conn, addr)
+                )
+                thread.daemon = True
+                thread.start()
+            except OSError:
+                break  # Socket closed
+
+        logger.info("Daemon stopped")
+
     def start(self):
-        """Start the daemon."""
         # Ensure we're root
         if os.geteuid() != 0:
-            logger.error("Daemon must run as root")
             sys.exit(1)
 
         # Remove old socket
-        if os.path.exists(self.SOCKET_PATH):
-            pass  os.unlink(self.SOCKET_PATH)
+        try:
+            if os.path.exists(self.SOCKET_PATH):
+                os.unlink(self.SOCKET_PATH)
+        except Exception:
+            pass
 
         # Create socket
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -153,8 +190,11 @@ class APManagerDaemon:
         self.socket.listen(5)
 
         # Set permissions so user can connect
-        os.chmod(self.SOCKET_PATH, 0o660)
-        os.chown(self.SOCKET_PATH, 0, os.getgid())  # Owned by root, group accessible
+        try:
+            os.chmod(self.SOCKET_PATH, 0o660)
+            os.chown(self.SOCKET_PATH, 0, os.getgid())  # Owned by root, group accessible
+        except OSError:
+            pass
 
         logger.info(f"Daemon started, listening on {self.SOCKET_PATH}")
 

@@ -240,7 +240,7 @@ class CleanupManager(SignalHandler):
 
     def cleanup(self):
         """Public cleanup function that provides user feedback."""
-        print("\nDoing cleanup...", end='\r', flush=True)
+        print("\nDoing cleanup...", flush=True)
         self._cleanup()
         print("done")
 

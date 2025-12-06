@@ -15,7 +15,7 @@ class APManagerClient:
     def __enter__(self):
         self.ensure_daemon_running()
 
-    def _send_request(self, command: str, args: list) -> dict:
+    def _send_request(self, command: str | list, args: list | str) -> dict:
         """Send request to daemon."""
         if not os.path.exists(self.SOCKET_PATH):
             raise ConnectionError("Daemon not running")
@@ -47,6 +47,7 @@ class APManagerClient:
             return json.loads(response_data.decode('utf-8'))
 
         except Exception as e:
+            raise
             logger.error(f"Failed to communicate with daemon: {e}")
             return {"success": False, "error": str(e)}
 
@@ -79,12 +80,30 @@ def ensure_daemon_running():
 
     # Check if daemon is running
     result = subprocess.run(
-        ['systemctl', 'is-active', 'ap-manager-daemon'],
+        ['systemctl', 'is-active', 'ap_manager_daemon'],
         capture_output=True,
         text=True
     )
 
     if result.returncode != 0:
         print("Starting AP Manager daemon...")
-        subprocess.run(['sudo', 'systemctl', 'start', 'ap-manager-daemon'])
-        subprocess.run(['sudo', 'systemctl', 'enable', 'ap-manager-daemon'])
+        subprocess.run(['sudo', 'systemctl', 'start', 'ap_manager_daemon'])
+        subprocess.run(['sudo', 'systemctl', 'enable', 'ap_manager_daemon'])
+
+
+if __name__ == "__main__":
+    # Ensure daemon is running
+    ensure_daemon_running()
+    import sys
+    # Create client
+    client = APManagerClient()
+    try:
+        # Create virtual interface
+        if client.create_virtual_interface('wlan0', 'xap0'):
+            print("✓ Virtual interface created")
+        else:
+            print("✗ Failed to create interface")
+            sys.exit(1)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
