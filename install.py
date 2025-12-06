@@ -93,9 +93,51 @@ def install_dependencies():
         subprocess.run([str(deps_script)], check=True, shell=True)
 
 
+def install_daemon():
+    """Install the AP Manager daemon."""
+
+    # Check if running as root
+    if os.geteuid() != 0:
+        print("Please run with sudo: sudo python3 install.py")
+        sys.exit(1)
+
+    # Install daemon script
+    daemon_source = Path(__file__).parent / "manager/setup/ap_manager_daemon.py"
+    daemon_dest = "/usr/local/bin/ap_manager_daemon.py"
+
+    shutil.copy2(daemon_source, daemon_dest)
+    os.chmod(daemon_dest, 0o755)
+
+    service_path = Path("/etc/systemd/system/")
+    shutil.copy("scripts/ap_manager.service", service_path)
+    shutil.copy("scripts/ap_manager_daemon.service", service_path)
+
+    subprocess.run(["systemctl", "daemon-reload"], check=True)
+
+    # Enable and start
+    subprocess.run(["systemctl", "enable", "ap_manager_daemon"])
+    subprocess.run(["systemctl", "start", "ap_manager_daemon"])
+
+    print("✓ Daemon installed and started")
+
+    # Create client config
+    client_config = Path(__file__).parent / "manager/setup/ap_manager_client.py"
+    print(f"✓ Client library: {client_config}")
+
+    # Set socket permissions
+    socket_path = "/var/run/ap_manager.sock"
+    if os.path.exists(socket_path):
+        os.chmod(socket_path, 0o660)
+
+    print("\nInstallation complete!")
+    print("Users in the 'netdev' group can now use AP Manager without sudo.")
+    print("\nTo add a user to the netdev group:")
+    print("  sudo usermod -aG netdev $USER")
+
+
 def setup_systemd():
     """Create and enable systemd service"""
-    service_path = Path("/etc/systemd/system/ap_manager.service")
+    service_path = Path("/etc/systemd/system/")
     shutil.copy("scripts/ap_manager.service", service_path)
     subprocess.run(["systemctl", "daemon-reload"], check=True)
 
@@ -109,6 +151,7 @@ def main():
     create_symlink()
     setup_sudoers()
     install_dependencies()
+    install_daemon()
     setup_systemd()
 
     print_colored("\nInstallation completed successfully!", Colors.GREEN)

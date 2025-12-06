@@ -108,7 +108,7 @@ class PrivilegeManager:
         if self.sudo_available:
             return self._elevate_with_sudo()
         elif self.pkexec_available:
-            return self._elevate_with_pkexec()
+            return self._elevate_with_systemd_run()
         else:
             print("No privilege escalation method available")
             print("Please run as root or configure sudo/pkexec")
@@ -147,83 +147,149 @@ class PrivilegeManager:
         return os.environ.copy()
 
     def _elevate_with_pkexec(self) -> bool:
-        """Use PolicyKit for elevation with full environment preservation."""
-        print("Using PolicyKit for privilege escalation...")
+        """Use shell script wrapper - most reliable for pkexec."""
+        import tempfile
 
-        # Get complete Python environment
-        env = self.python_environment
-
-        # Add POLKIT_ACTION for our custom policy
-        action_file = self._create_polkit_action()
-        env['POLKIT_ACTION'] = action_file
-
-        # Get script path and arguments
+        # Get absolute paths
         script_path = os.path.abspath(sys.argv[0])
-        script_args = sys.argv[1:] if len(sys.argv) > 1 else []
+        python_exe = sys.executable
 
-        # Check if we're running as a module
-        if script_path.endswith('.py') or os.path.isfile(script_path):
-            # Running as script file
-            cmd = [sys.executable, script_path] + script_args
-        elif sys.argv[0] == '-m':
-            # Running as Python module (-m flag)
-            module_name = sys.argv[1] if len(sys.argv) > 1 else ''
-            cmd = [sys.executable, '-m', module_name] + sys.argv[2:]
-        else:
-            # Could be a console script entry point
-            cmd = [script_path] + script_args
-
-        # Prepare environment variables for pkexec
-        # pkexec doesn't preserve all env vars by default
-        env_vars_to_preserve = [
-            ('PYTHONPATH', env.get('PYTHONPATH', '')),
-            ('PATH', env.get('PATH', '')),
-            # ('VIRTUAL_ENV', env.get('VIRTUAL_ENV', '')),
-            # ('CONDA_PREFIX', env.get('CONDA_PREFIX', '')),
-            # ('HOME', env.get('HOME', '')),  # Important for user configs
-            # ('USER', env.get('USER', '')),
-            # ('LOGNAME', env.get('LOGNAME', '')),
-            # ('XDG_RUNTIME_DIR', env.get('XDG_RUNTIME_DIR', '')),  # For DBus
-            # ('DBUS_SESSION_BUS_ADDRESS', env.get('DBUS_SESSION_BUS_ADDRESS', '')),
+        # Create shell wrapper
+        script = [
+            '#!/bin/bash',
+            '# This wrapper runs with pkexec and sets up the Python environment',
+            '# Set minimal environment - pkexec will sanitize most vars',
+            f'export HOME="{os.environ.get('HOME', '')}"',
+            f'export USER="{os.environ.get('USER', '')}"',
+            f'export LOGNAME="{os.environ.get('LOGNAME', '')}"',
+            '# Set Python path',
+            f'export PYTHONPATH="{':'.join(sys.path)}"',
+            '# Change to original directory',
+            f'cd "{os.getcwd()}"',
+            '# Execute Python with preserved imports',
+            f'exec "{python_exe}" "{script_path}" "$@"',
         ]
 
-        # Build pkexec command with preserved environment
-        pkexec_cmd = ['pkexec']
+        shell_wrapper = '\n'.join(script)
 
-        # Add environment preservation
-        for var_name, var_value in env_vars_to_preserve:
-            if var_value:
-                pkexec_cmd.extend(['env', f'{var_name}={var_value}'])
+        # Write shell wrapper
+        shell_file = tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.sh',
+            delete=False,
+            prefix='ap_manager_wrapper_'
+        )
+        shell_file.write(shell_wrapper)
+        shell_file.close()
 
-        # Add the actual command
-        pkexec_cmd.extend(cmd)
+        # Make executable
+        os.chmod(shell_file.name, 0o755)
+
+        # Build command
+        cmd = ['pkexec', shell_file.name]
+        if len(sys.argv) > 1:
+            cmd.extend(sys.argv[1:])
 
         try:
-            print(f"Executing: {' '.join(pkexec_cmd[:5])}...")  # Don't print full cmd for security
+            print("Running via shell wrapper...")
             result = subprocess.run(
-                pkexec_cmd,
-                env=env,  # Pass the full environment
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode != 0:
+                print(f"pkexec failed (code: {result.returncode})")
+                if result.stderr:
+                    # Filter out common pkexec warnings
+                    lines = [l for l in result.stderr.split('\n')
+                             if l and 'GLib-' not in l and 'Gtk-' not in l]
+                    if lines:
+                        print(f"Error: {' '.join(lines[:3])}")
+                return False
+
+            return True
+
+        except subprocess.TimeoutExpired:
+            print("pkexec timed out")
+            return False
+        except Exception as e:
+            print(f"pkexec exception: {e}")
+            return False
+        finally:
+            try:
+                os.unlink(shell_file.name)
+            except:
+                pass
+
+    def _elevate_with_systemd_run(self) -> bool:
+        """Use systemd-run as alternative to pkexec."""
+        if not shutil.which('systemd-run'):
+            print("systemd-run not available")
+            return False
+
+        # Create a service script
+        import tempfile
+
+        service_script = f'''[Unit]
+Description=AP Manager Privileged Service
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory={os.getcwd()}
+Environment=PYTHONPATH={':'.join(sys.path)}
+Environment=HOME={os.environ.get('HOME', '')}
+ExecStart={sys.executable} {sys.argv[0]} {" ".join(sys.argv[1:])}
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+'''
+
+        service_file = tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.service',
+            delete=False,
+            prefix='ap_manager_service_'
+        )
+        service_file.write(service_script)
+        service_file.close()
+
+        try:
+            # Run with systemd-run
+            cmd = [
+                'systemd-run',
+                '--user',
+                '--unit=ap-manager-service',
+                '--same-dir',
+                '--setenv=PYTHONPATH=' + ':'.join(sys.path),
+                '--setenv=HOME=' + os.environ.get('HOME', ''),
+                sys.executable, sys.argv[0]
+            ] + sys.argv[1:]
+
+            print("Running with systemd-run...")
+            result = subprocess.run(
+                cmd,
                 capture_output=True,
                 text=True
             )
-            print(result.stdout)
 
             if result.returncode != 0:
-                print(f"pkexec failed with exit code {result.returncode}")
-                if result.stderr:
-                    print(f"Error: {result.stderr[:500]}")  # Limit error output
-            sys.exit(1)
-            return result.returncode == 0
+                print(f"systemd-run failed: {result.stderr}")
+                return False
 
-        except FileNotFoundError:
-            print("pkexec not found. Please install policykit-1 package.")
-            return False
-        except Exception as e:
-            print(f"Error using pkexec: {e}")
-            return False
+            print("✓ Running as systemd service")
+            return True
+
         finally:
-            if os.path.exists(action_file):
-                os.remove(action_file)
+            try:
+                os.unlink(service_file.name)
+            except:
+                pass
 
     def _create_polkit_action(self) -> str:
         """Create a temporary PolicyKit action file."""

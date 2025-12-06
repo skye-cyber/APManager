@@ -18,7 +18,7 @@ from .lock import lock
 from .netmanager import NetworkManager
 from .cleanup import CleanupManager
 from ..ap_utils.copy import cp_n_safe
-from ..ap_utils.privilege import NetworkPrivileges
+from ..setup.ap_manager_client import APManagerClient
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -46,6 +46,9 @@ class ApManager:
         # all new files and directories must be readable only by root.
         # in special cases we must use chmod to give any other permissions.
         # self.SCRIPT_UMASK = "0077"
+
+        # Create client
+        self.client = APManagerClient()
 
         # lock file for the mutex counter
         self.COUNTER_LOCK_FILE = f"/tmp/ap_manager.{os.getpid()}.lock"
@@ -823,12 +826,14 @@ class ApManager:
 
         try:
             # Create the virtual interface
-            with NetworkPrivileges() as priv:
-                result = priv.run_command(['iw', 'dev', self.config['wifi_iface'], 'interface', 'add', self.config['vwifi_iface'], 'type', '__ap'], check=True, capture_output=True, text=True)
+            # with NetworkPrivileges() as priv:
+            result = self.client._send_request('iw', ['dev', self.config['wifi_iface'], 'interface', 'add', self.config['vwifi_iface'], 'type', '__ap'])
+            # result = subprocess.run(['iw', 'dev', self.config['wifi_iface'], 'interface', 'add', self.config['vwifi_iface'], 'type', '__ap'], check=True, capture_output=True, text=True)
+            print(result)
 
-                if result.returncode != 0:
-                    self.config['vwifi_iface'] = None
-                    self.clean.die(self.virt_diems)
+            if result.returncode != 0:
+                self.config['vwifi_iface'] = None
+                self.clean.die(self.virt_diems)
 
             # Wait for NetworkManager to recognize the interface if needed
             if (self.netmanager.networkmanager_is_running() and self.netmanager.NM_OLDER_VERSION == 0):
