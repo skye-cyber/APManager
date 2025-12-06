@@ -1,0 +1,27 @@
+[Unit]
+Description=AP Manager Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ap_manager_daemon.py
+Restart=on-failure
+RestartSec=5
+User=root
+Group=root
+WorkingDirectory=/var/run
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening - modified
+NoNewPrivileges=yes
+# Removed PrivateTmp=yes
+ProtectSystem=full  # Changed from strict to full
+ReadWritePaths=/var/run/ap_manager.sock
+
+[Install]
+WantedBy=multi-user.target
+
+[Socket]
+ListenStream=/var/run/ap_manager.sock
+SocketMode=0660
