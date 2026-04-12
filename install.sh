@@ -22,52 +22,54 @@ fi
 INSTALL_DIR="/opt/ap_manager"
 BASE_DIR="/etc/ap_manager"
 
-# mkdir -p "$INSTALL_DIR/"
-mkdir -p "$INSTALL_DIR/scripts"
-#mkdir -p "$INSTALL_DIR/manager/core/"
-#mkdir -p "$INSTALL_DIR/manager/ap_utils/"
-#mkdir -p "$INSTALL_DIR/manager/ui/"
-#mkdir -p "$INSTALL_DIR/manager/config/"
-# mkdir -p "$BASE_DIR/conf"
+mkdir -p "$INSTALL_DIR/"
+mkdir -p "$BASE_DIR/conf"
 mkdir -p "$BASE_DIR/proc"
 
 # Copy files
-cp -a scripts/*.sh "$INSTALL_DIR/scripts"
-#cp -a manager/* "$INSTALL_DIR/manager"
-# cp -r manager/config/* "$BASE_DIR/conf/"
-# mv "$BASE_DIR/conf/config-bc.json" "$BASE_DIR/.config-bc.json"
+cp -r commsys "$INSTALL_DIR/"
+cp -r cli "$INSTALL_DIR/"
+cp -r captive_portal "$INSTALL_DIR/"
+cp -r ap_utils "$INSTALL_DIR/"
+cp -r core "$INSTALL_DIR/"
+cp *.sh "$INSTALL_DIR/"
+cp *.py "$INSTALL_DIR/"
+cp -r config/* "$BASE_DIR/conf/"
+mv "$BASE_DIR/conf/config-bc.json" "$BASE_DIR/.config-bc.json"
 
-# Modify permision
-chown 777 $BASE_DIR -R
+# Set proper permissions
+chmod 755 "$BASE_DIR" -R
+chmod +x "$INSTALL_DIR"/*.sh
+chmod +x "$INSTALL_DIR"/*.py
 
 # Make scripts executable
-#chmod +x "$INSTALL_DIR/manager/core/ap_manager.py"
-#chmod +x "$INSTALL_DIR/manager/core/ap_cli.py"
-chmod +x "$INSTALL_DIR/scripts/ap_manager.sh"
-chmod +x "$INSTALL_DIR/scripts/sudors_edit.sh"
-chmod +x "$INSTALL_DIR/scripts/deps.sh"
+# chmod +x "$INSTALL_DIR/core/ap_manager.py"
+# chmod +x "$INSTALL_DIR/cli/cli.py"
+# chmod +x "$INSTALL_DIR/ap_manager.sh"
+chmod +x "$INSTALL_DIR/sudors_edit.sh"
+chmod +x "$INSTALL_DIR/deps.sh"
 
 # Create symlink in /usr/local/bin for easy access
-ln -sf "~/local/bin/ap_manager" /usr/local/bin/ap_manager
+ln -sf "$INSTALL_DIR/cli/cli.py" /usr/local/bin/ap_manager
 
 echo "Setting up sodors ..."
-"$INSTALL_DIR/scripts/sudors_edit.sh" install
+# "$INSTALL_DIR/sudors_edit.sh" install
 
 # Install dependencies
 echo "Installing dependencies..."
-# "$INSTALL_DIR/scripts/deps.sh" install
+# "$INSTALL_DIR/deps.sh" install
 
 # Create systemd service
-cp scripts/ap_manager.service /etc/systemd/system/
+cp ap_manager.service /etc/systemd/system/
 systemctl daemon-reload
 
 echo "Installation completed successfully!"
 echo ""
 echo "Usage examples:"
-echo "  ap_manager start          # Start hotspot"
-echo "  ap_manager configure      # Interactive configuration"
-echo "  ap_manager status         # Check status"
-echo "  ap_manager stop           # Stop hotspot"
+echo "  sudo ap_manager hotspot start          # Start hotspot"
+echo "  sudo ap_manager config configure       # Modify/update/edit configuration"
+echo "  sudo ap_manager hotspot status         # Check status"
+echo "  sudo ap_manager hotspot stop           # Stop hotspot"
 echo ""
 echo "To enable automatic startup:"
 echo -e "  systemctl enable $BLUE ap_manager.service $NC"
