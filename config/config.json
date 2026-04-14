@@ -1,7 +1,7 @@
 {
   "ssid": "nethub@ap1",
   "wpa_version": 2,
-  "password": "",
+  "password": "nethub@ap1",
   "mode": "nmcli",
   "channel": 6,
   "ip_range": "192.168.100.0/24",

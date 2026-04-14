@@ -26,6 +26,9 @@ mkdir -p "$INSTALL_DIR/"
 mkdir -p "$BASE_DIR/conf"
 mkdir -p "$BASE_DIR/proc"
 
+# Creat log directory
+mkdir -p "$INSTALL_DIR/logs"
+
 # Copy files
 cp -r commsys "$INSTALL_DIR/"
 cp -r cli "$INSTALL_DIR/"

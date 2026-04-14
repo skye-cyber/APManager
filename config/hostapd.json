@@ -5,7 +5,7 @@
     "hw_mode": "g",
     "channel": 11,
     "interface": "xap0",
-    "ssid": "NetHub@AP1",
+    "ssid": "nethub@ap1",
     "driver": "nl80211",
     "ctrl_interface": "/etc/ap_manager/conf/hostapd_ctrl",
     "ctrl_interface_group": 0,

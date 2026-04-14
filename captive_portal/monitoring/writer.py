@@ -31,4 +31,4 @@ class Writer:
         return True
 
 
-writer = Writer('/home/skye/NetHub/backend/hotspotmanager/captive_portal/monitoring/monitoring.log')
+writer = Writer((Path(__file__).parent.parent.parent / 'logs/monitoring.log').as_posix())
