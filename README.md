@@ -69,7 +69,7 @@ cd APManager
 # Install the application
 ./install.sh
 
-# Set up systemd service (optional: handle by install)
+# Set up systemd service (optional: handled by install)
 cp ap_manager.service /etc/systemd/system/
 systemctl enable ap_manager
 systemctl start ap_manager
@@ -90,6 +90,9 @@ pip3 install -r requirements.txt
 
 ```bash
 # Start a basic hotspot
+sudo ap_manager hospot start
+
+# Start a basic with custom arguments
 sudo ap_manager hotspot start --ssid "MyHotspot" --password "secure123"
 
 # Authenticate a device
