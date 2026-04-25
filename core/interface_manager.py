@@ -264,7 +264,7 @@ class InterfaceManager:
         try:
             if not self.interface_exists(self.config["vwifi_iface"]):
                 print("Creating a virtual WiFi interface... ", end="")
-                # Actually create the virtual interface using iw command
+                # Create the virtual interface using iw command
                 command.run(
                     [
                         "iw",
