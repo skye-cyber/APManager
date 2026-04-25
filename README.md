@@ -271,7 +271,7 @@ The main configuration file is located at `/etc/ap_manager/conf/config.json`.
 ### Hardware Requirements
 - WiFi adapter supporting AP mode (master mode)
 - Minimum 1GB RAM
-- 500MB disk space
+- Disk space: any size as long as os can work
 
 ### Software Requirements
 - Python 3.8+
