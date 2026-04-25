@@ -366,7 +366,7 @@ class InterfaceManager:
 
             # Set MAC address if virtualization is enabled and MAC is specified
             if self.config.get("mac") and 0 > 1:
-                self.netmanager.wifi_switch(state="off")
+                # self.netmanager.wifi_switch(state="off")
                 command.run(
                     [
                         "ip",
@@ -379,7 +379,7 @@ class InterfaceManager:
                     ],
                     check=True,
                 )
-                self.netmanager.wifi_switch(state="on")
+                # self.netmanager.wifi_switch(state="on")
 
             # Configure interface
             print(
@@ -388,14 +388,14 @@ class InterfaceManager:
             if self.config.get("share_method", "none") != "bridge":
                 # Bring interface up
                 def bring_interface_up():
-                    self.netmanager.wifi_switch(state="off")
+                    # self.netmanager.wifi_switch(state="off")
                     self.netmanager.rfkill_off()
                     result = command.run(
                         ["ip", "link", "set", "up", "dev", self.config["vwifi_iface"]],
                         check=True,
                         force_return=True,
                     )
-                    self.netmanager.wifi_switch(state="off")
+                    # self.netmanager.wifi_switch(state="off")
                     return result
 
                 result = bring_interface_up()
@@ -460,7 +460,7 @@ class InterfaceManager:
             # Set MAC address if virtualization is enabled and MAC is specified
             # if not self.config.get('no_virt', False) and
             if self.config.get("mac"):
-                self.netmanager.wifi_switch(state="off")
+                # self.netmanager.wifi_switch(state="off")
                 command.run(
                     [
                         "ip",
@@ -473,7 +473,7 @@ class InterfaceManager:
                     ],
                     check=True,
                 )
-                self.netmanager.wifi_switch(state="on")
+                # self.netmanager.wifi_switch(state="on")
 
             # Set MAC address if virtualization is disabled and MAC is specified
             """
