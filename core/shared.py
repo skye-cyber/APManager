@@ -94,7 +94,7 @@ class Shared:
             result = subprocess.run(cmd, capture_output=True, text=True)
 
             if result.returncode == 0:
-                print("ap_manager UP")
+                # print("ap_manager UP")
                 return True
             return False
         except Exception as e:

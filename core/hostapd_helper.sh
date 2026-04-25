@@ -6,7 +6,7 @@ set -e  # Exit on error
 
 CONFIG_DIR="/etc/ap_manager/conf"
 HOSTAPD_CONF="$CONFIG_DIR/hostapd.conf"
-PID_FILE="/run/ap_manager/hostapd.pid"
+PID_FILE="/run/ap_manager/proc/hostapd.pid"
 LOG_FILE="/etc/ap_manager/hostapd.log"
 INTERFACE="xap0"
 

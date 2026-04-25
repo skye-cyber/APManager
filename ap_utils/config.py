@@ -10,6 +10,7 @@ class ConfigManager:
         self.config_file = config_file
         self.config = self.load_config()
         self.config_dir = config_file.parent or self.config.get('conf_dir', '')
+        self.proc_dir = self.config.get('proc_dir', self.config_dir.parent / 'proc')
 
     def __enter__(self):
         # Ensure we are using update config
@@ -18,6 +19,18 @@ class ConfigManager:
     @property
     def get_config(self):
         return self.config
+
+    @property
+    def dnsmasq_pidfile(self):
+        return Path(self.proc_dir) / 'dnsmasq.pid'
+
+    @property
+    def hostapd_pidfile(self):
+        return Path(self.proc_dir) / 'hostapd.pid'
+
+    @property
+    def dnsmasq_leasesfile(self):
+        return Path(self.proc_dir) / 'dnsmasq.leases'
 
     def load_config(self):
         """Load configuration from file"""

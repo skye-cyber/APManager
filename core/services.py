@@ -1,7 +1,6 @@
 import os
 import re
 import sys
-import time
 import subprocess
 from ap_utils.colors import fg
 from ap_utils.command import command
@@ -17,6 +16,9 @@ class NetServices:
         self.config = config_manager.get_config
         self.base_dir = self.config["base_dir"]
         self.proc_dir = self.config["proc_dir"]
+        self.hostapd_pidfile = config_manager.hostapd_pidfile
+        self.dnsmasq_pidfile = config_manager.dnsmasq_pidfile
+        self.dnsmasq_leasesfile = config_manager.dnsmasq_leasesfile
         self.conf_dir = self.config.get("conf_dir", config_manager.__bconfdir__)
         self.subnet = self.config["ip_range"]
         self.dhcp_range = self.get_dhcp_range()
@@ -25,7 +27,7 @@ class NetServices:
         self.config = config_manager.get_config
 
     def configure(self):
-        print("Configuring services ...")
+        print(f"Configuring services ['{fg.BLUE}hostapd{fg.RESET}', '{fg.BLUE}dnsmasq{fg.RESET}']...")
         self.configure_hostapd()
         self.update_global_hostapd()
 
@@ -47,9 +49,7 @@ class NetServices:
     def configure_hostapd(self):
         """Configure hostapd with all necessary parameters."""
         try:
-            print(
-                f"Config: {fg.YELLOW}{os.path.join(self.conf_dir, 'hostapd.conf')}{fg.RESET}"
-            )
+            print(f"Hostapd Config: {fg.YELLOW}{os.path.join(self.conf_dir, 'hostapd.conf')}{fg.RESET}")
 
             # Basic hostapd configuration
             config_lines = [
@@ -424,7 +424,7 @@ class NetServices:
         except subprocess.CalledProcessError as e:
             sys.exit(f"Failed to set up iptables rules for DNS: {str(e)}")
 
-    def dhcp_service_nodnsmasq(self):
+    def dhcp_service_dnsmasq(self):
         try:
             # Allow DHCP traffic
             command.run(
@@ -482,24 +482,21 @@ class NetServices:
                 if shared.is_dnsmasq_running():
                     shared.kill_dnsmasq()
 
-                print("Starting dnsmasq ..")
                 result = subprocess.run(
                     [
                         "dnsmasq",
                         "-C",
                         os.path.join(self.conf_dir, "dnsmasq.conf"),
                         "-x",
-                        os.path.join(self.conf_dir, "dnsmasq.pid"),
+                        self.dnsmasq_pidfile.as_posix(),
                         "-l",
-                        os.path.join(self.conf_dir, "dnsmasq.leases"),
+                        self.dnsmasq_leasesfile.as_posix(),
                         "-p",
                         str(self.config.get("dns_port", 5353)),
                     ],
                     check=True,
                 )
-                if result.returncode == 0:
-                    print("DNSMAQ started OK")
-                else:
+                if result.returncode != 0:
                     print("Failed to start dnsmasq:", result.stderr or result.stdout)
             except Exception as e:
                 print(e)
@@ -507,6 +504,8 @@ class NetServices:
                 pid = self.get_dnsmasq_pid()
                 if pid:
                     print(f"DNSMASQ RUNNING as PID: {fg.CYAN}{pid}{fg.RESET}")
+                else:
+                    print(f"{fg.RED}Failed to start dnsmasq!{fg.RESET}")
 
                 # Restore original umask
                 os.umask(old_umask)
@@ -517,9 +516,8 @@ class NetServices:
             print(e)
 
     def get_dnsmasq_pid(self):
-        pid_file = os.path.join(self.conf_dir, "dnsmasq.pid")
-        if os.path.exists(pid_file):
-            with open(pid_file, "r") as f:
+        if os.path.exists(self.dnsmasq_pidfile.as_posix()):
+            with open(self.dnsmasq_pidfile, "r") as f:
                 pid = f.read()
             return pid
         return
@@ -566,8 +564,6 @@ class NetServices:
         }
         debug_level = self.config.get("hostapd_debug", None)
 
-        pid_file = os.path.join(self.proc_dir, "hostapd.pid")
-
         if self.config.get("daemon", False):
             hostapd_cmd.append("-B")
             if self.config["pidfile"]:
@@ -575,7 +571,7 @@ class NetServices:
                 # Create the file
                 with open(self.config["pidfile"], "w") as f:
                     f.write("")
-                hostapd_cmd.extend(["-P", pid_file])
+                hostapd_cmd.extend(["-P", self.hostapd_pidfile.as_posix()])
 
         if debug_level and debug_level > 0:
             hostapd_cmd.append(debug_map[debug_level])
@@ -631,12 +627,12 @@ class NetServices:
                 self.dhcp_service_nodns()
             # Start dnsmasq if not disabled
             if not self.config.get("no_dnsmasq", False):
-                self.dhcp_service_nodnsmasq()
+                self.dhcp_service_dnsmasq()
 
     def enable_internet_sharing(self):
         """Enable Internet sharing using the specified method."""
         if self.config["share_method"] != "none":
-            print(f"Sharing Internet using method: {self.config['share_method']}")
+            print(f"Sharing Internet using method: {fg.BMAGENTA}{self.config['share_method']}{fg.RESET}")
 
             if self.config["share_method"] == "nat":
                 self.nat_sharing()

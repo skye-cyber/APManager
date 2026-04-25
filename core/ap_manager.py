@@ -197,7 +197,8 @@ class ApManager:
                 }
                 itype = 'ethernet' if 'eth' in ifname else 'wireless' if 'wlan' in ifname else 'bridge' if 'br' in ifname else 'access point' if 'ap' in ifname else '-'
 
-                wifi_ifaces.append({"name": ifname, "state": state, "type": itype})
+                iface_mac = self.get_macaddr(ifname)
+                wifi_ifaces.append({"name": ifname, "state": state, "type": itype, 'mac': iface_mac or None})
             return wifi_ifaces
         except Exception as e:
             print(f"Error getting wifi_ifaces: {e}")

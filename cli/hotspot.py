@@ -65,13 +65,26 @@ def hotspot_start(ctx, wifi_iface, internet_iface, ssid, password, channel,
 
             if success:
                 from ap_utils.config import config_manager
+                dnsamasq_pid = None
+                hostapd_pid = None
+                try:
+                    with open(config_manager.dnsmasq_pidfile.as_posix(), 'r') as f:
+                        dnsamasq_pid = f.read()
+                        dnsamasq_pid = dnsamasq_pid.strip() if dnsamasq_pid else dnsamasq_pid
+                    with open(config_manager.hostapd_pidfile.as_posix(), 'r') as f:
+                        hostapd_pid = f.read()
+                        hostapd_pid = hostapd_pid.strip() if hostapd_pid else hostapd_pid
+                except Exception:
+                    pass
                 config = config_manager.get_config
                 console.print(Panel.fit(
                     "[bold green]✓ Hotspot started successfully![/bold green]\n\n"
                     f"[cyan]SSID:[/cyan] {config['ssid'] or 'From config'}\n"
-                    f"[cyan]Interface:[/cyan] {config['internet_iface']}\n"
-                    f"[cyan]Sharing:[/cyan] {config['share_method']} via {config['internet_iface']}",
-                    title="Hotspot Status"
+                    f"[cyan]Net Interface:[/cyan] {config['internet_iface']}\n"
+                    f"[cyan]Sharing Method:[/cyan] {config['share_method']} from {config['internet_iface']}\n"
+                    f"[cyan]DNSMASQ PID:[/cyan] {dnsamasq_pid}\n"
+                    f"[cyan]HOSTAPD PID:[/cyan] {hostapd_pid}\n",
+                    title="AccessPoint Status"
                 ))
             else:
                 console.print("[red]✗ Failed to start hotspot[/red]")
@@ -117,7 +130,7 @@ def hotspot_status(ctx):
             str(instance['pid']),
             instance.get('viface', 'N/A'),
             instance.get('ssid', 'N/A'),
-            str(instance.get('clients', 0))
+            str(instance.get('clients', '_'))
         )
 
     console.print(table)

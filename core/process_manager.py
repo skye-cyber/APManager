@@ -20,6 +20,7 @@ class ProcessManager:
         self.lock = lock
         self.netmanager = ap_manager.netmanager
         self.clean = ap_manager.clean
+        self.dnsmasq_leasesfile = self.ap_manager.config_manager.dnsmasq_leasesfile
 
         # Configuration paths
         self.conf_dir = self.config.get('conf_dir', ap_manager.config_manager.__bconfdir__)
@@ -153,9 +154,8 @@ class ProcessManager:
         hostname = "*"
 
         # Check dnsmasq leases file
-        dnsmasq_leases = os.path.join(self.conf_dir, 'dnsmasq.leases')
-        if os.path.exists(dnsmasq_leases):
-            with open(dnsmasq_leases, 'r') as f:
+        if os.path.exists(self.dnsmasq_leasesfile):
+            with open(self.dnsmasq_leasesfile, 'r') as f:
                 for line in f:
                     if mac in line:
                         parts = line.strip().split()

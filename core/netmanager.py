@@ -133,22 +133,30 @@ class NetworkManager:
         """Add an interface to NetworkManager's unmanaged devices list."""
         # global self.ADDED_UNMANAGED
 
-        if not self.networkmanager_exists():
-            return False
-
-        # Ensure config directory exists
-        os.makedirs(os.path.dirname(self.NETWORKMANAGER_CONF), exist_ok=True)
-
-        # Create config file if it doesn't exist
-        if not os.path.exists(self.NETWORKMANAGER_CONF):
-            with open(self.NETWORKMANAGER_CONF, 'w'):
-                pass
-
-        # Get MAC address if not provided
-        if self.NM_OLDER_VERSION and mac is None:
-            mac = self.ap_man.get_macaddr(iface)
-            if not mac:
+        def validate():
+            global mac
+            if not self.networkmanager_exists():
                 return False
+
+            # Ensure config directory exists
+            os.makedirs(os.path.dirname(self.NETWORKMANAGER_CONF), exist_ok=True)
+
+            # Create config file if it doesn't exist
+            if not os.path.exists(self.NETWORKMANAGER_CONF):
+                with open(self.NETWORKMANAGER_CONF, 'w'):
+                    pass
+
+            # Get MAC address if not provided
+            if self.NM_OLDER_VERSION and mac is None:
+                mac = self.ap_man.get_macaddr(iface)
+                if not mac:
+                    return False
+            return True
+
+        isValid = validate()
+
+        if not isValid:
+            return isValid
 
         # Lock mutex
         try:

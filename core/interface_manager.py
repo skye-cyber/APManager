@@ -13,7 +13,6 @@ from ap_utils.command import command
 from ap_utils.copy import cp_n_safe
 from .services import netservice
 from .shared import shared
-from pathlib import Path
 
 
 class InterfaceManager:
@@ -289,7 +288,7 @@ class InterfaceManager:
 
             print(f"\n{fg.LWHITE}{fg.DWHITE}Interface\tStatus{fg.RESET}")
             print(
-                f"\n{fg.BLUE}{self.config['vwifi_iface']}\t\t{fg.BGREEN}Ready{fg.RESET}\n"
+                f"{fg.BLUE}{self.config['vwifi_iface']}\t\t{fg.BGREEN}Ready{fg.RESET}\n"
             )
 
             # Wait for NetworkManager to recognize the interface if needed
@@ -306,7 +305,7 @@ class InterfaceManager:
             # If no new MAC specified or it's already in use, generate a new one
             if not new_mac or new_mac in all_macs:
                 new_mac = self.get_new_mac_address(self.config["vwifi_iface"])
-                print(f"Generated ne mac: {fg.MAGENTA}{new_mac}{fg.RESET}")
+                print(f"Generated new mac: {fg.MAGENTA}{new_mac}{fg.RESET}")
                 if not new_mac:
                     self.clean.die("Failed to generate new MAC address")
                 self.config["mac"] = new_mac
