@@ -69,7 +69,7 @@ class Shared:
     def kill_service(self, service) -> bool:
         try:
             result = subprocess.run(
-                ["killall", service], capture_output=True, text=True
+                ["sudo", "killall", service], capture_output=True, text=True
             )
 
             if (

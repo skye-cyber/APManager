@@ -117,9 +117,7 @@ class InterfaceManager:
 
         finally:
             try:
-                # shared.kill_hostapd()
-                # shared.start_service("dnsmasq", restart=True)
-                # shared.start_dnsmasq((Path(self.conf_dir) / "dnsmasq.conf").as_posix())
+                shared.kill_hostapd()
                 return shared.start_service("ap_manager", restart=True)
 
                 # netservice.start_hostapd()
@@ -365,7 +363,7 @@ class InterfaceManager:
             command.run(["ip", "addr", "flush", self.config["vwifi_iface"]], check=True)
 
             # Set MAC address if virtualization is enabled and MAC is specified
-            if self.config.get("mac") and 0 > 1:
+            if self.config.get("mac"):
                 # self.netmanager.wifi_switch(state="off")
                 command.run(
                     [
@@ -381,6 +379,7 @@ class InterfaceManager:
                 )
                 # self.netmanager.wifi_switch(state="on")
 
+            self.config["mac"] = ""
             # Configure interface
             print(
                 f"Configure interface for {self.config['share_method']} sharing method"
