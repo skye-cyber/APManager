@@ -106,24 +106,27 @@ class InterfaceManager:
 
     def stop_accesspoint(self) -> bool:
         shared.stop_service("hostapd")
-        return shared.stop_service("ap_manger")
+        return shared.stop_service("apmanger_hostapd")
 
     def start_apmanager_service(self) -> bool:
-        # Make interface unmanaged if needed
         try:
-            pass  # self.netmanager.networkmanager_rm_unmanaged(self.config['vwifi_iface'])
+            # Make interface unmanaged if needed
+            # self.netmanager.networkmanager_rm_unmanaged(self.config['vwifi_iface'])
+            pass
         except Exception as e:
-            self.clean.die(f"Failed to make interface unmanaged: {str(e)}")
-
+            self.clean.die(f"Failed to make interface unmanaged: {e}")
+            return False
         finally:
             try:
                 shared.kill_hostapd()
-                return shared.start_service("ap_manager", restart=True)
-
-                # netservice.start_hostapd()
             except Exception as e:
-                print(f"Failed to start ap manager service {str(e)}")
-                return False
+                print(f"Failed to kill hostapd: {e}")
+
+        try:
+            return shared.start_service("apmanger_hostapd", restart=True)
+        except Exception as e:
+            print(f"Failed to start ap manager service: {e}")
+            return False
 
     def set_country(self) -> bool:
         # Set country code if needed

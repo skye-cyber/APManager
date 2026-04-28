@@ -5,22 +5,20 @@ After=network.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/etc/ap_manager/conf
-ExecStart=/usr/sbin/hostapd -B -P /etc/ap_manager/proc/hostapd.pid /etc/ap_manager/conf/hostapd.conf
-ExecStop=/bin/killall hostapd
+WorkingDirectory=/etc/ap_manager/
+# Ensure executable exists first
+# ExecStartPre=ls /usr/local/bin/ap_manager 2>/dev/null
+ExecStart=/usr/local/bin/ap_manager hotspot start
+ExecStop=/usr/local/bin/ap_manager hotspot stop --force
 ExecStartPost=/bin/sleep 2
 # Reload sends SIGHUP
-ExecReload=/bin/kill -HUP $MAINPID
-KillMode=process
+ExecReload=/usr/bin/bash -c "/usr/local/bin/ap_manager hotspot stop --force && /usr/local/bin/ap_manager hotspot start"
+KillMode=mixed
 KillSignal=SIGTERM
 TimeoutStopSec=10
-Restart=on-failure
-# Don't restart too quickly
-StartLimitInterval=3
-StartLimitBurst=5
-RestartSec=2
 User=root
-SyslogIdentifier=hostapd
+SyslogIdentifier=ap_manager
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=network.target
+RequiredBy=apmanager-hostapd.service

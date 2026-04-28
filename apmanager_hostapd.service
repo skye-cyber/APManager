@@ -1,0 +1,27 @@
+[Unit]
+Description=Start Hostapd using ap_manager config
+# Run after ap_manager--after all interface setup is done
+After=ap_manager.service
+
+[Service]
+Type=forking
+RemainAfterExit=no
+WorkingDirectory=/etc/ap_manager/conf
+ExecStart=/usr/sbin/hostapd -B -P /etc/ap_manager/proc/hostapd.pid /etc/ap_manager/conf/hostapd.conf
+ExecStop=/bin/killall hostapd
+ExecStartPost=/bin/sleep 2
+# Reload sends SIGHUP
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=10
+Restart=on-failure
+# Don't restart too quickly
+StartLimitInterval=2
+StartLimitBurst=2
+RestartSec=2
+User=root
+SyslogIdentifier=hostapd
+
+[Install]
+WantedBy=network.target

@@ -27,6 +27,8 @@ install_dependencies() {
         return 1
     fi
 
+    # Install python dependencies
+    sudo python3 -m pip install -r requirements.txt --break-system --root-user-action=ignore
     echo -e "${GREEN}Dependencies installed successfully${NC}"
 }
 

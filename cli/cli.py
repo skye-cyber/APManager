@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 AP Manager CLI - Modernized with Click and Rich
 """
