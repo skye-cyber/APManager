@@ -3,6 +3,7 @@
 Custom Hotspot Manager for Linux
 Supports both NetworkManager and systemd-networkd
 """
+
 import os
 import sys
 from typing import Optional, List
@@ -78,8 +79,8 @@ class ApManager:
         self.network_config = NetworkConfigurator(self)
         self.process_manager = ProcessManager(self)
 
-        self.proc_dir = self.config['proc_dir']
-        self.conf_dir = self.config.get('conf_dir', config_manager.__bconfdir__)
+        self.proc_dir = self.config["proc_dir"]
+        self.conf_dir = self.config.get("conf_dir", config_manager.__bconfdir__)
 
         os.makedirs(self.proc_dir, exist_ok=True)
         os.makedirs(self.conf_dir, exist_ok=True)
@@ -87,25 +88,25 @@ class ApManager:
         # Set proper permissions for base_dir
         # os.chmod(self.config['base_dir'], 0o444)
 
-        self.iface_dir = os.path.join(self.config['base_dir'], 'ifaces')
+        self.iface_dir = os.path.join(self.config["base_dir"], "ifaces")
 
         self.virt_diems = "Maybe your WiFi adapter does not fully support virtual interfaces. Try again with --no-virt."
 
         # Increase resource limits to prevent file descriptor issues
         increase_resource_limits()
 
-    def setup_accesspoint(self):
+    def setup_accesspoint(self, progress_fn=None):
         """Initialize the access point with proper configuration."""
         try:
             # Use the new interface manager to initialize the access point
-            self.interface_manager.initialize_access_point()
+            self.interface_manager.initialize_access_point(progress_fn=progress_fn)
 
             # Print configuration information
-            if self.config['hidden']:
+            if self.config["hidden"]:
                 print("Access Point's SSID is hidden!")
-            if self.config['mac_filter']:
+            if self.config["mac_filter"]:
                 print("MAC address filtering is enabled!")
-            if self.config['isolate_clients']:
+            if self.config["isolate_clients"]:
                 print("Access Point's clients will be isolated!")
 
             # Configure services
@@ -113,18 +114,16 @@ class ApManager:
                 self.interface_manager.initialize_wifi_interface()
             except Exception as e:
                 self.clean.die(f"Failed to configure services: {str(e)}")
-
-            # Exit cleanly
-            print("Success")
-            # self.clean.clean_exit("Success")
             return True
 
         except Exception as e:
             self.clean.die(f"Initialization failed: {str(e)}")
 
     def start_ap(self):
-        print(f"{fg.YELLOW}hostapd{fg.RESET} command-line interface: {fg.LYELLOW}hostapd_cli -p {self.conf_dir}/hostapd_ctrl{fg.RESET}")
-        if self.config['no_haveged']:
+        print(
+            f"{fg.YELLOW}hostapd{fg.RESET} command-line interface: {fg.LYELLOW}hostapd_cli -p {self.conf_dir}/hostapd_ctrl{fg.RESET}"
+        )
+        if self.config["no_haveged"]:
             self.haveged_watchdog()
             # HAVEGED_WATCHDOG_PID =
 
@@ -146,15 +145,22 @@ class ApManager:
 
     def check_dependencies(self):
         """Check if required tools are available"""
-        required_tools = ['iptables', 'dnsmasq']
-        if self.config['mode'] == 'nmcli':
-            required_tools.append('nmcli')
+        required_tools = ["iptables", "dnsmasq"]
+        if self.config["mode"] == "nmcli":
+            required_tools.append("nmcli")
         else:
-            required_tools.extend(['systemctl', 'hostapd'])
+            required_tools.extend(["systemctl", "hostapd"])
 
         missing_tools = []
         for tool in required_tools:
-            if subprocess.call(['which', tool], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) != 0:
+            if (
+                subprocess.call(
+                    ["which", tool],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                != 0
+            ):
                 missing_tools.append(tool)
 
         if missing_tools:
@@ -165,11 +171,13 @@ class ApManager:
     def get_available_wifi_ifaces(self):
         """Get list of available wireless wifi_ifaces"""
         try:
-            result = subprocess.run(['ip', 'link', 'show'], capture_output=True, text=True)
+            result = subprocess.run(
+                ["ip", "link", "show"], capture_output=True, text=True
+            )
             wifi_ifaces = []
-            for line in result.stdout.split('\n'):
-                if 'wl' in line and 'state UP' in line:
-                    ifname = line.split(':')[1].strip()
+            for line in result.stdout.split("\n"):
+                if "wl" in line and "state UP" in line:
+                    ifname = line.split(":")[1].strip()
                     wifi_ifaces.append(ifname)
             return wifi_ifaces
         except Exception as e:
@@ -179,26 +187,47 @@ class ApManager:
     def get_all_available_ifaces(self):
         """Get list of available wireless wifi_ifaces"""
         try:
-            result = subprocess.run(['ip', 'link', 'show'], capture_output=True, text=True)
+            result = subprocess.run(
+                ["ip", "link", "show"], capture_output=True, text=True
+            )
             wifi_ifaces = []
-            for line in result.stdout.split('\n'):
-                state = "UP" if "state UP" in line else 'DOWN'
+            for line in result.stdout.split("\n"):
+                state = "UP" if "state UP" in line else "DOWN"
 
                 # if 'wl' in line and 'state UP' in line:
-                if len(line.split(':')) < 2 or not any([state_str in line for state_str in ('state UP', 'state DOWN')]):
+                if len(line.split(":")) < 2 or not any(
+                    [state_str in line for state_str in ("state UP", "state DOWN")]
+                ):
                     continue
 
-                ifname = line.split(':')[1].strip()
+                ifname = line.split(":")[1].strip()
                 ifype_map = {
-                    'eth' in ifname: "ethernet",
-                    'wlan' in ifname: "wireless",
-                    'br' in ifname: "bridge",
-                    'ap' in ifname: "access point"
+                    "eth" in ifname: "ethernet",
+                    "wlan" in ifname: "wireless",
+                    "br" in ifname: "bridge",
+                    "ap" in ifname: "access point",
                 }
-                itype = 'ethernet' if 'eth' in ifname else 'wireless' if 'wlan' in ifname else 'bridge' if 'br' in ifname else 'access point' if 'ap' in ifname else '-'
+                itype = (
+                    "ethernet"
+                    if "eth" in ifname
+                    else "wireless"
+                    if "wlan" in ifname
+                    else "bridge"
+                    if "br" in ifname
+                    else "access point"
+                    if "ap" in ifname
+                    else "-"
+                )
 
                 iface_mac = self.get_macaddr(ifname)
-                wifi_ifaces.append({"name": ifname, "state": state, "type": itype, 'mac': iface_mac or None})
+                wifi_ifaces.append(
+                    {
+                        "name": ifname,
+                        "state": state,
+                        "type": itype,
+                        "mac": iface_mac or None,
+                    }
+                )
             return wifi_ifaces
         except Exception as e:
             print(f"Error getting wifi_ifaces: {e}")
@@ -210,32 +239,72 @@ class ApManager:
             return self._ap_init_()
 
             # Create hotspot connection
-            subprocess.run([
-                'nmcli', 'con', 'add', 'type', 'wifi', 'ifname', self.config['wifi_iface'],
-                'con-name', self.config['vwifi_iface'], 'autoconnect', 'no', 'ssid', self.config['ssid']
-            ], check=True)
+            subprocess.run(
+                [
+                    "nmcli",
+                    "con",
+                    "add",
+                    "type",
+                    "wifi",
+                    "ifname",
+                    self.config["wifi_iface"],
+                    "con-name",
+                    self.config["vwifi_iface"],
+                    "autoconnect",
+                    "no",
+                    "ssid",
+                    self.config["ssid"],
+                ],
+                check=True,
+            )
 
             # Set hotspot mode
-            subprocess.run([
-                'nmcli', 'con', 'modify', self.config['vwifi_iface'], '802-11-wireless.mode', 'ap'
-            ], check=True)
+            subprocess.run(
+                [
+                    "nmcli",
+                    "con",
+                    "modify",
+                    self.config["vwifi_iface"],
+                    "802-11-wireless.mode",
+                    "ap",
+                ],
+                check=True,
+            )
 
-            if self.config['use_psk']:
+            if self.config["use_psk"]:
                 # Set security
-                subprocess.run([
-                    'nmcli', 'con', 'modify', self.config['vwifi_iface'], '802-11-wireless-security.key-mgmt', 'wpa-psk'
-                ], check=True)
+                subprocess.run(
+                    [
+                        "nmcli",
+                        "con",
+                        "modify",
+                        self.config["vwifi_iface"],
+                        "802-11-wireless-security.key-mgmt",
+                        "wpa-psk",
+                    ],
+                    check=True,
+                )
 
-                subprocess.run([
-                    'nmcli', 'con', 'modify', self.config['vwifi_iface'], '802-11-wireless-security.psk', self.config['password']
-                ], check=True)
+                subprocess.run(
+                    [
+                        "nmcli",
+                        "con",
+                        "modify",
+                        self.config["vwifi_iface"],
+                        "802-11-wireless-security.psk",
+                        self.config["password"],
+                    ],
+                    check=True,
+                )
 
             # Set IP configuration
-            subprocess.run([
-                'nmcli', 'con', 'modify', 'xap0', 'ipv4.method', 'shared'
-            ], check=True)
+            subprocess.run(
+                ["nmcli", "con", "modify", "xap0", "ipv4.method", "shared"], check=True
+            )
 
-            print(f"NetworkManager '{self.config['vwifi_iface']}' configured successfully")
+            print(
+                f"NetworkManager '{self.config['vwifi_iface']}' configured successfully"
+            )
             return True
 
         except subprocess.CalledProcessError as e:
@@ -247,10 +316,10 @@ class ApManager:
         try:
             return self._ap_init_()
             # Stop NetworkManager on the wifi_iface
-            subprocess.run(['systemctl', 'stop', 'NetworkManager'], check=True)
+            subprocess.run(["systemctl", "stop", "NetworkManager"], check=True)
 
             # Create hostapd configuration
-            host_conf = ConfigManager(config_manager.__bconfdir__ / 'hostapd.json')
+            host_conf = ConfigManager(config_manager.__bconfdir__ / "hostapd.json")
 
             hostapd_conf = host_conf.__str__
 
@@ -272,7 +341,7 @@ class ApManager:
             rsn_pairwise=CCMP
             """
 
-            with open('/etc/hostapd/hostapd.conf', 'w') as f:
+            with open("/etc/hostapd/hostapd.conf", "w") as f:
                 f.write(hostapd_conf)
 
             # Create systemd network configuration
@@ -281,11 +350,9 @@ class ApManager:
             network_conf = (
                 "[Match]\n"
                 f"Name={_network_conf['wifi_iface']}\n\n"
-
                 "[Network]\n"
                 f"Address={_network_conf['gateway']}/24\n"
                 "DHCPServer=yes\n\n"
-
                 "[DHCPServer]\n"
                 "PoolOffset=10\n"
                 "PoolSize=50\n"
@@ -294,13 +361,17 @@ class ApManager:
             )
 
             print("NETFCONF:", network_conf)
-            with open(f'/etc/systemd/network/10-{self.config["wifi_iface"]}.network', 'w') as f:
+            with open(
+                f"/etc/systemd/network/10-{self.config['wifi_iface']}.network", "w"
+            ) as f:
                 f.write(network_conf)
 
             # Enable and start services
-            subprocess.run(['systemctl', 'enable', '--now', 'systemd-networkd'], check=True)
-            subprocess.run(['systemctl', 'unmask', 'hostapd'], check=True)
-            subprocess.run(['systemctl', 'enable', '--now', 'hostapd'], check=True)
+            subprocess.run(
+                ["systemctl", "enable", "--now", "systemd-networkd"], check=True
+            )
+            subprocess.run(["systemctl", "unmask", "hostapd"], check=True)
+            subprocess.run(["systemctl", "enable", "--now", "hostapd"], check=True)
 
             print(f"systemd-networkd {'xap0'} configured successfully")
             return True
@@ -318,10 +389,12 @@ class ApManager:
 
         return self._ap_init_()
 
-        if self.config['mode'] == 'nmcli':
+        if self.config["mode"] == "nmcli":
             success = self.setup_nmcli_hotspot()
             if success:
-                subprocess.run(['nmcli', 'con', 'up', self.config['vwifi_iface']], check=True)
+                subprocess.run(
+                    ["nmcli", "con", "up", self.config["vwifi_iface"]], check=True
+                )
         else:
             success = self.setup_systemd_hotspot()
 
@@ -333,24 +406,37 @@ class ApManager:
     def stop_nmcli_hotspot(self):
 
         try:
-            if self.config['mode'] == 'nmcli':
+            if self.config["mode"] == "nmcli":
                 # Use NetworkManager CLI for stopping and deleting the connection
-                command.run(['nmcli', 'con', 'down', self.config['vwifi_iface']],
-                            check=True, capture_output=True)
-                command.run(['nmcli', 'con', 'delete', self.config['vwifi_iface']],
-                            check=True, capture_output=True)
+                command.run(
+                    ["nmcli", "con", "down", self.config["vwifi_iface"]],
+                    check=True,
+                    capture_output=True,
+                )
+                command.run(
+                    ["nmcli", "con", "delete", self.config["vwifi_iface"]],
+                    check=True,
+                    capture_output=True,
+                )
             else:
                 # Stop hostapd service
-                command.run(['systemctl', 'stop', 'hostapd'],
-                            check=True, capture_output=True)
+                command.run(
+                    ["systemctl", "stop", "hostapd"], check=True, capture_output=True
+                )
 
                 # Stop systemd-networkd service
-                command.run(['systemctl', 'stop', 'systemd-networkd'],
-                            check=True, capture_output=True)
+                command.run(
+                    ["systemctl", "stop", "systemd-networkd"],
+                    check=True,
+                    capture_output=True,
+                )
 
                 # Restart NetworkManager
-                command.run(['systemctl', 'start', 'NetworkManager'],
-                            check=True, capture_output=True)
+                command.run(
+                    ["systemctl", "start", "NetworkManager"],
+                    check=True,
+                    capture_output=True,
+                )
 
                 # Additional cleanup using iw and ip commands
                 self._cleanup_network_interface()
@@ -364,23 +450,31 @@ class ApManager:
         """Perform additional cleanup using iw and ip commands."""
         try:
             # Bring down the interface
-            command.run(['ip', 'link', 'set', 'dev', self.config['vwifi_iface'], 'down'],
-                        check=True, capture_output=True)
+            command.run(
+                ["ip", "link", "set", "dev", self.config["vwifi_iface"], "down"],
+                check=True,
+                capture_output=True,
+            )
 
             # Flush IP addresses
-            command.run(['ip', 'addr', 'flush', self.config['vwifi_iface']],
-                        check=True, capture_output=True)
+            command.run(
+                ["ip", "addr", "flush", self.config["vwifi_iface"]],
+                check=True,
+                capture_output=True,
+            )
 
             # Remove the interface if it's a virtual interface
-            if not self.config.get('no_virt', False):
-                command.run(['iw', 'dev', self.config['vwifi_iface'], 'del'],
-                            check=True, capture_output=True)
+            if not self.config.get("no_virt", False):
+                command.run(
+                    ["iw", "dev", self.config["vwifi_iface"], "del"],
+                    check=True,
+                    capture_output=True,
+                )
 
             # Remove from NetworkManager unmanaged list if needed
             if self.netmanager.networkmanager_is_running():
                 self.netmanager.networkmanager_rm_unmanaged_if_needed(
-                    self.config['vwifi_iface'],
-                    self.config.get('old_macaddr')
+                    self.config["vwifi_iface"], self.config.get("old_macaddr")
                 )
 
         except subprocess.CalledProcessError as e:
@@ -396,14 +490,18 @@ class ApManager:
         print(f"Mode: {self.config['mode']}")
         print(f"Gateway: {self.config['gateway']}")
 
-        if self.config['mode'] == 'nmcli':
-            result = subprocess.run(['nmcli', 'con', 'show', '--active'], capture_output=True, text=True)
-            if 'hotspot' in result.stdout:
+        if self.config["mode"] == "nmcli":
+            result = subprocess.run(
+                ["nmcli", "con", "show", "--active"], capture_output=True, text=True
+            )
+            if "hotspot" in result.stdout:
                 print("Status: ACTIVE")
             else:
                 print("Status: INACTIVE")
         else:
-            result = subprocess.run(['systemctl', 'is-active', 'hostapd'], capture_output=True, text=True)
+            result = subprocess.run(
+                ["systemctl", "is-active", "hostapd"], capture_output=True, text=True
+            )
             print(f"hostapd Status: {result.stdout.strip()}")
 
     def configure(self, args: dict = {}):
@@ -414,10 +512,10 @@ class ApManager:
 
     # taken from iw/util.c
     def ieee80211_frequency_to_channel(self, _freq=None):
-        _freq = _freq if _freq else self.config['freq_band']
+        _freq = _freq if _freq else self.config["freq_band"]
 
         """Convert frequency to channel number (taken from iw/util.c)"""
-        freq = int(_freq.split('.')[0])
+        freq = int(_freq.split(".")[0])
 
         if freq < 1000:
             return 0
@@ -474,11 +572,18 @@ class ApManager:
 
     @property
     def has_hostapd(self):
-        return subprocess.run(['which', 'hostapd'], check=True, capture_output=True).returncode == 0
+        return (
+            subprocess.run(
+                ["which", "hostapd"], check=True, capture_output=True
+            ).returncode
+            == 0
+        )
 
     @property
     def where_hostapd(self):
-        return subprocess.run(['which', 'hostapd'], check=True, capture_output=True, text=True).stdout
+        return subprocess.run(
+            ["which", "hostapd"], check=True, capture_output=True, text=True
+        ).stdout
 
     # Methods moved to InterfaceManager
     def can_transmit_to_channel(self, iface=None, channel=None):

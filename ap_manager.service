@@ -1,6 +1,6 @@
 [Unit]
 Description=Create AP manager Service
-After=network.target
+After=network-online.target
 
 [Service]
 Type=oneshot
@@ -20,5 +20,5 @@ User=root
 SyslogIdentifier=ap_manager
 
 [Install]
-WantedBy=network.target
-RequiredBy=apmanager-hostapd.service
+WantedBy=network-online.target
+RequiredBy=apmanager_hostapd.service

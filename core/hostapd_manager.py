@@ -8,10 +8,14 @@ from pathlib import Path
 class HostapdManager:
     def __init__(self, config=None):
         self.config = config_manager.get_config
-        self.config_file = (Path(self.config['conf_dir']) / "hostapd.conf").as_posix()
-        self.script_path = (Path(self.config['base_prog_dir']) / Path(__file__).parent / "hostapd_helper.sh").as_posix()
-        self.pid_file = Path(self.config['proc_dir']) / "hostapd.pid"
-        self.log_file = Path(self.config['base_dir']) / "hostapd.log"
+        self.config_file = (Path(self.config["conf_dir"]) / "hostapd.conf").as_posix()
+        self.script_path = (
+            Path(self.config["base_prog_dir"])
+            / Path(__file__).parent
+            / "hostapd_helper.sh"
+        ).as_posix()
+        self.pid_file = Path(self.config["proc_dir"]) / "hostapd.pid"
+        self.log_file = Path(self.config["base_dir"]) / "hostapd.log"
         # Ensure script exists
         self._ensure_script()
 
@@ -32,13 +36,13 @@ class HostapdManager:
         cmd = [self.script_path, action]
 
         # Add config-specific args
-        if self.config.get('daemon', True):
+        if self.config.get("daemon", True):
             cmd.append("--daemon")
 
-        if self.config.get('hostapd_debug', False):
+        if self.config.get("hostapd_debug", False):
             cmd.append("--debug")
 
-        if self.config.get('vwifi_iface'):
+        if self.config.get("vwifi_iface"):
             cmd.append(f"--interface={self.config['vwifi_iface']}")
 
         cmd.append(f"--config={self.config_file}")
@@ -49,13 +53,8 @@ class HostapdManager:
             cmd.extend(extra_args)
 
         try:
-            os.environ['PATH'] = '/usr/sbin:/usr/bin:/sbin:/bin'
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            os.environ["PATH"] = "/usr/sbin:/usr/bin:/sbin:/bin"
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             print(result.stdout)
             return True, result.stdout
         except subprocess.CalledProcessError as e:
@@ -133,7 +132,7 @@ class HostapdManager:
         """Check if hostapd is running"""
         if os.path.exists(self.pid_file):
             try:
-                with open(self.pid_file, 'r') as f:
+                with open(self.pid_file, "r") as f:
                     pid = int(f.read().strip())
 
                 # Check if process exists
@@ -146,7 +145,7 @@ class HostapdManager:
     def get_pid(self):
         """Get hostapd PID"""
         if self.is_running():
-            with open(self.pid_file, 'r') as f:
+            with open(self.pid_file, "r") as f:
                 return int(f.read().strip())
         return None
 
@@ -171,12 +170,13 @@ class HostapdManager:
 
     def update_config(self, config_updates):
         """Update hostapd config and reload"""
-        config_path = self.config.get('hostapd_config',
-                                      '/etc/ap_manager/conf/hostapd.conf')
+        config_path = self.config.get(
+            "hostapd_config", "/etc/ap_manager/conf/hostapd.conf"
+        )
 
         try:
             # Read current config
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 lines = f.readlines()
 
             # Apply updates
@@ -192,14 +192,15 @@ class HostapdManager:
                     updated_lines.append(line)
 
             # Add new keys not already present
-            existing_keys = {line.split('=')[0].strip()
-                             for line in lines if '=' in line}
+            existing_keys = {
+                line.split("=")[0].strip() for line in lines if "=" in line
+            }
             for key, value in config_updates.items():
                 if key not in existing_keys:
                     updated_lines.append(f"{key}={value}\n")
 
             # Write updated config
-            with open(config_path, 'w') as f:
+            with open(config_path, "w") as f:
                 f.writelines(updated_lines)
 
             print(f"✅ Config updated: {config_updates}")

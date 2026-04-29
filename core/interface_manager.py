@@ -37,7 +37,8 @@ class InterfaceManager:
 
         self.virt_diems = "Maybe your WiFi adapter does not fully support virtual interfaces. Try again with --no-virt."
 
-    def initialize_access_point(self):
+    def initialize_access_point(self, progress_fn=None):
+        self.progress_fn = progress_fn  # Used to update click ui status
         """Initialize the access point with proper configuration"""
         try:
             # Lock mutex for thread safety
@@ -90,42 +91,35 @@ class InterfaceManager:
 
             self.setup_interface()
 
+            self.set_country()
+
             self.update_configuration()
 
             netservice.configure()
 
-            # Start services [hostapd, dnsmasq, dns, internet sharing]
+            # Start services [dnsmasq, dns, internet sharing]
             netservice.start()
             self.save_iface_info(pid_file)
 
-            self.set_country()
-
+            # Start [hostapd] services
             return self.start_apmanager_service()
         except Exception as e:
             self.clean.die(f"AP Initialization failed: {str(e)}")
 
     def stop_accesspoint(self) -> bool:
-        shared.stop_service("hostapd")
-        return shared.stop_service("apmanger_hostapd")
+        # shared.stop_service("hostapd")
+        return shared.stop_service("apmanager_hostapd")
 
     def start_apmanager_service(self) -> bool:
         try:
-            # Make interface unmanaged if needed
-            # self.netmanager.networkmanager_rm_unmanaged(self.config['vwifi_iface'])
-            pass
-        except Exception as e:
-            self.clean.die(f"Failed to make interface unmanaged: {e}")
-            return False
-        finally:
-            try:
-                shared.kill_hostapd()
-            except Exception as e:
-                print(f"Failed to kill hostapd: {e}")
+            shared.kill_hostapd()
+            import time
 
-        try:
-            return shared.start_service("apmanger_hostapd", restart=True)
+            time.sleep(2)  # Wait for hostapd to die
+            netservice.start_hostapd(progress_fn=self.progress_fn)
+            # shared.start_service("apmanager_hostapd", restart=True)
         except Exception as e:
-            print(f"Failed to start ap manager service: {e}")
+            self.clean.die(f"Failed to stop/start apmanager_hostapd: {e}")
             return False
 
     def set_country(self) -> bool:
@@ -356,7 +350,9 @@ class InterfaceManager:
         )
 
         try:
-            print("Flush addresses")
+            print(
+                f"[{fg.DWHITE}{self.config['vwifi_iface']}{fg.RESET}] Flush addresses"
+            )
             # Bring interface down and flush addresses
             command.run(
                 ["ip", "link", "set", "down", "dev", self.config["vwifi_iface"]],
@@ -427,99 +423,6 @@ class InterfaceManager:
                         "addr",
                         "add",
                         f"{ap_ip}/24",
-                        "broadcast",
-                        broadcast,
-                        "dev",
-                        self.config["vwifi_iface"],
-                    ],
-                    check=True,
-                )
-
-            return True
-
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Failed to initialize WiFi interface: {str(e)}"
-            if hasattr(self, "virt_diems"):
-                error_msg += f"\n{self.virt_diems}"
-            self.clean.die(error_msg)
-
-    def x__initialize_wifi_interface(self):
-        """Initialize the WiFi interface with proper configuration"""
-        print(
-            f"Initialize wifi: {fg.YELLOW}{self.config['vwifi_iface']}{fg.RESET} on {fg.BWHITE}{self.config['internet_iface']}{fg.RESET}"
-        )
-
-        try:
-            print("Flush addresses")
-            # Bring interface down and flush addresses
-            command.run(
-                ["ip", "link", "set", "down", "dev", self.config["vwifi_iface"]],
-                check=True,
-            )
-
-            command.run(["ip", "addr", "flush", self.config["vwifi_iface"]], check=True)
-
-            # Set MAC address if virtualization is enabled and MAC is specified
-            # if not self.config.get('no_virt', False) and
-            if self.config.get("mac"):
-                # self.netmanager.wifi_switch(state="off")
-                command.run(
-                    [
-                        "ip",
-                        "link",
-                        "set",
-                        "dev",
-                        self.config["vwifi_iface"],
-                        "address",
-                        self.config["mac"],
-                    ],
-                    check=True,
-                )
-                # self.netmanager.wifi_switch(state="on")
-
-            # Set MAC address if virtualization is disabled and MAC is specified
-            """
-            if self.config.get('no_virt', False) and self.config.get('mac'):
-                command.run([
-                    'ip', 'link', 'set', 'dev', self.config['vwifi_iface'],
-                    'address', self.config['mac']
-                ], check=True)
-            """
-
-            # Configure interface for non-bridge sharing method
-            print("Configure interface for non-bridge sharing method")
-            if self.config.get("share_method", "none") != "bridge":
-                # Bring interface up
-                # print(" - Bring interface up\n")
-
-                def bring_interface_up():
-                    return command.run(
-                        ["ip", "link", "set", "up", "dev", self.config["vwifi_iface"]],
-                        check=True,
-                        force_return=True,
-                    )
-
-                result = True  # bring_interface_up()
-                if (
-                    not result
-                    or isinstance(result, dict)
-                    and result["status"] == "error"
-                ):
-                    command.run(["sudo", "rfkill", "unblock", "all"], check=True)
-                    bring_interface_up()
-
-                # Set IP address and broadcast
-                print(" - Set IP address and broadcast\n")
-                gateway = self.config["gateway"]
-                ip_range = self.config["ip_range"]
-                broadcast = f"{'.'.join(gateway.split('.')[:3])}.255"
-
-                command.run(
-                    [
-                        "ip",
-                        "addr",
-                        "add",
-                        ip_range,
                         "broadcast",
                         broadcast,
                         "dev",

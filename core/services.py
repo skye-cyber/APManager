@@ -8,7 +8,6 @@ from ap_utils.config import config_manager
 from .netmanager import netmanager
 from .shared import shared
 import shutil
-from .hostapd_manager import hostapdmanager
 
 
 class NetServices:
@@ -19,6 +18,8 @@ class NetServices:
         self.hostapd_pidfile = config_manager.hostapd_pidfile
         self.dnsmasq_pidfile = config_manager.dnsmasq_pidfile
         self.dnsmasq_leasesfile = config_manager.dnsmasq_leasesfile
+        self.hostapd_logfile = config_manager.hostapd_logfile
+        self.dnsmasq_logfile = config_manager.dnsmasq_logfile
         self.conf_dir = self.config.get("conf_dir", config_manager.__bconfdir__)
         self.subnet = self.config["ip_range"]
         self.dhcp_range = self.get_dhcp_range()
@@ -27,7 +28,9 @@ class NetServices:
         self.config = config_manager.get_config
 
     def configure(self):
-        print(f"Configuring services ['{fg.BLUE}hostapd{fg.RESET}', '{fg.BLUE}dnsmasq{fg.RESET}']...")
+        print(
+            f"Configuring services ['{fg.BLUE}hostapd{fg.RESET}', '{fg.BLUE}dnsmasq{fg.RESET}']..."
+        )
         self.configure_hostapd()
         self.update_global_hostapd()
 
@@ -40,6 +43,7 @@ class NetServices:
     def start(self):
         self.enable_internet_sharing()
         self.start_dhcp_dns()
+        self.start_dnsmasq()
         # self.start_hostapd()
 
     def get_dhcp_range(self) -> str:
@@ -49,7 +53,9 @@ class NetServices:
     def configure_hostapd(self):
         """Configure hostapd with all necessary parameters."""
         try:
-            print(f"Hostapd Config: {fg.YELLOW}{os.path.join(self.conf_dir, 'hostapd.conf')}{fg.RESET}")
+            print(
+                f"Hostapd Config: {fg.YELLOW}{os.path.join(self.conf_dir, 'hostapd.conf')}{fg.RESET}"
+            )
 
             # Basic hostapd configuration
             config_lines = [
@@ -308,9 +314,9 @@ class NetServices:
                         f.write(f"dhcp-host={host}\n")
 
                 # Configure DNS logging if specified
-                if self.config.get("dns_logfile"):
+                if self.config.get("dnsmasq_logfile"):
                     f.write("log-queries\n")
-                    f.write(f"log-facility={self.config['dns_logfile']}\n")
+                    f.write(f"log-facility={self.config['dnsmasq_logfile']}\n")
 
                 # Redirect all traffic to localhost if requested
                 if self.config.get("share_method") == "none" and self.config.get(
@@ -445,6 +451,13 @@ class NetServices:
                 check=True,
             )
 
+        except subprocess.CalledProcessError as e:
+            raise f"Failed to start dnsmasq: {str(e)}"
+        except Exception as e:
+            print(e)
+
+    def start_dnsmasq(self):
+        try:
             # Handle AppArmor restrictions
             complain_cmd = None
             try:
@@ -482,18 +495,26 @@ class NetServices:
                 if shared.is_dnsmasq_running():
                     shared.kill_dnsmasq()
 
+                cmd = [
+                    "dnsmasq",
+                    "-C",  # Specify configuration file
+                    os.path.join(self.conf_dir, "dnsmasq.conf"),
+                    "-x",  # Specify path of PID file
+                    self.dnsmasq_pidfile.as_posix(),
+                    "-l",
+                    self.dnsmasq_leasesfile.as_posix(),
+                    "-p",  # Specify port to listen for DNS requests on
+                    str(self.config.get("dns_port", 5353)),
+                    "--log-queries",  # Log DNS queries.
+                ]
+                if self.config.get("dnsmasq_debug", False):
+                    cmd.extend(
+                        [
+                            "--log-debug",  # Log debugging information.
+                        ]
+                    )
                 result = subprocess.run(
-                    [
-                        "dnsmasq",
-                        "-C",
-                        os.path.join(self.conf_dir, "dnsmasq.conf"),
-                        "-x",
-                        self.dnsmasq_pidfile.as_posix(),
-                        "-l",
-                        self.dnsmasq_leasesfile.as_posix(),
-                        "-p",
-                        str(self.config.get("dns_port", 5353)),
-                    ],
+                    cmd,
                     check=True,
                 )
                 if result.returncode != 0:
@@ -509,7 +530,6 @@ class NetServices:
 
                 # Restore original umask
                 os.umask(old_umask)
-
         except subprocess.CalledProcessError as e:
             raise f"Failed to start dnsmasq: {str(e)}"
         except Exception as e:
@@ -522,8 +542,8 @@ class NetServices:
             return pid
         return
 
-    def start_hostapd(self):
-        return hostapdmanager.start()
+    def start_hostapd(self, progress_fn=None):
+        # return hostapdmanager.start()
         """Start hostapd with proper error handling and output buffering."""
         # Check if stdbuf is available for unbuffered output
         stdbuf_path = None
@@ -535,21 +555,18 @@ class NetServices:
         except subprocess.CalledProcessError:
             stdbuf_path = None
 
-        # Check if hostapd is already running
+        # Check if hostapd is already running--should have been killed first
         if shared.is_hostapd_running():
-            print("Hostapd is already running")
-            # return True
-
-        # Check if the interface is already configured
-        if shared.is_interface_configured(self.config["vwifi_iface"]):
-            print("Interface is already configured, restarting hostapd")
-            if not self.restart_hostapd():
-                return False
+            print(
+                "Hostapd is already running: Consider killing it first <killall hostapd>"
+            )
+            return False
 
         # Build the hostapd command
         hostapd_cmd = []
         if stdbuf_path:
-            hostapd_cmd.extend([stdbuf_path, "-oL"])
+            hostapd_cmd.extend(["sudo", stdbuf_path, "-oL"])
+            pass
 
         hostapd_cmd.extend(
             [
@@ -559,59 +576,59 @@ class NetServices:
             ]
         )
         debug_map = {
-            1: "-d",
-            2: "-dd",
+            1: "-qq",  # for even less
+            2: "-q",  # show less debug messages
+            3: "-d",  # show more debug messages
+            4: "-dd",  # for even more debug
         }
-        debug_level = self.config.get("hostapd_debug", None)
-
-        if self.config.get("daemon", False):
-            hostapd_cmd.append("-B")
-            if self.config["pidfile"]:
-                pid_file = self.config["pidfile"]
-                # Create the file
-                with open(self.config["pidfile"], "w") as f:
-                    f.write("")
-                hostapd_cmd.extend(["-P", self.hostapd_pidfile.as_posix()])
+        debug_level = self.config.get("hostapd_debug", 2)
 
         if debug_level and debug_level > 0:
-            hostapd_cmd.append(debug_map[debug_level])
+            hostapd_cmd.extend(
+                [
+                    debug_map[debug_level],
+                    "-T",  # record to Linux tracing in addition to logging
+                    "-K",  # include key data in debug messages
+                ]
+            )
+            if self.config.get("hostapd_timestamps", False):
+                hostapd_cmd.append("-t")
 
-        hostapd_cmd.extend(["&disown", "&"]) if self.config.get(
-            "daemon", False
-        ) else None
-
-        # print("HOSTAPD cmd:", hostapd_cmd)
         # Start hostapd in the background
         try:
+            if (
+                not self.config.get("daemon", False) or 1 == 2
+            ):  # For now alway run in foreground
+                return self.hostapd_daemonize(hostapd_cmd)
+            else:
+                if progress_fn:
+                    progress_fn(
+                        f"[{fg.BBLUE}Live{fg.RESET}] {fg.BGREEN}RUNNING IN FOREGROUND{fg.RESET}"
+                    )
+                else:
+                    print(f"{fg.BGREEN}RUNNING IN FOREGROUND{fg.RESET}")
+
             # Use Popen to start the process
-            self.hostapd_process = subprocess.run(
-                hostapd_cmd,
-                # stdout=subprocess.PIPE,
-                # stderr=subprocess.PIPE,
-                start_new_session=True,
-                text=True,
-            )
+            with open(self.hostapd_logfile, "w") as fp:
+                self.hostapd_process = subprocess.run(
+                    hostapd_cmd,
+                    stdout=fp,
+                    # stderr=subprocess.PIPE,
+                    # start_new_session=True,
+                    # preexec_fn=os.setsid,
+                    text=True,
+                )
+
+            # Give hostapd time to initialize
+            import time
+
+            time.sleep(2)
 
             # Save the PID
-            self.hostapd_pid = shared.get_hostapd_pid(pid_file)
+            self.hostapd_pid = shared.get_hostapd_pid(self.hostapd_pidfile)
 
-            print(f"HOSTAPD PID:{fg.CYAN}{self.hostapd_pid}{fg.RESET}")
+            print(f"HOSTAPD RUNNING as PID:{fg.CYAN}{self.hostapd_pid}{fg.RESET}")
 
-            # Wait a moment to check if hostapd started successfully
-            # Check if the process is still running
-            """
-            if self.hostapd_process.stdout is not None:
-                # Process has terminated, read error output
-                stderr_output = self.hostapd_process.stderr
-                stdout_output = self.hostapd_process.stdout
-                error_msg = stderr_output or stdout_output
-
-                print(f"Error: {fg.FRED}{error_msg}{fg.RESET}")
-
-                print(f"{fg.RED}Hostapd failed to start{fg.RESET}")
-                return False
-
-            """
             # Success - hostapd is running in background
             print(f"{fg.GREEN}Hostapd started successfully{fg.RESET}")
             return True
@@ -619,6 +636,46 @@ class NetServices:
         except Exception as e:
             print(f"Error starting hostapd: {str(e)}")
             return False
+
+    def hostapd_daemonize(self, cmd: list):
+        # try:
+        # Child: daemonize and exec hostapd
+        from .process_manager import ProcessManager
+
+        status = ProcessManager.daemonize()
+        if status != 0:
+            raise RuntimeError(f"Daemonization failed with status {status}")
+
+        # Write our PID (grandchild) to file before exec
+        with open(self.hostapd_pidfile.as_posix(), "w") as f:
+            f.write(str(os.getpid()))
+
+        # Redirect logs to file instead of /dev/null if desired
+        if self.hostapd_logfile:
+            log_fd = os.open(
+                self.hostapd_logfile, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644
+            )
+            os.dup2(log_fd, 1)  # stdout
+            os.dup2(log_fd, 2)  # stderr
+            os.close(log_fd)
+
+        # Exec hostapd (replaces current process image)
+        os.execv(
+            cmd[0],  # this is typically stdbuf or hostapd path
+            cmd[1:],
+        )
+        print("Child exec...")
+        # self.hostapd_process = subprocess.run(
+        #     cmd,
+        #     text=True,
+        # )
+
+        print("Exit..")
+        # Should never reach here
+        os._exit(1)
+
+    # except Exception as e:
+    # print(f"Hostapd Daemonization failed: {fg.RED}{e}{fg.RESET}")
 
     def start_dhcp_dns(self):
         """Start DHCP and DNS services with proper error handling."""
@@ -632,7 +689,9 @@ class NetServices:
     def enable_internet_sharing(self):
         """Enable Internet sharing using the specified method."""
         if self.config["share_method"] != "none":
-            print(f"Sharing Internet using method: {fg.BMAGENTA}{self.config['share_method']}{fg.RESET}")
+            print(
+                f"Sharing Internet using method: {fg.BMAGENTA}{self.config['share_method']}{fg.RESET}"
+            )
 
             if self.config["share_method"] == "nat":
                 self.nat_sharing()

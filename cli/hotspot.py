@@ -73,7 +73,12 @@ def hotspot_start(
 
         # Start hotspot
         try:
-            success = cli_obj.manager.setup_accesspoint()
+
+            def progress_callback(desc=None):
+                if desc:
+                    return progress.update(task, description=desc)
+
+            success = cli_obj.manager.setup_accesspoint(progress_fn=progress_callback)
             progress.update(task, completed=100)
 
             if success:

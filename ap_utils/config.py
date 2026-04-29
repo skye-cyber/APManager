@@ -6,11 +6,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class ConfigManager:
-    def __init__(self, config_file: Path = Path('/etc/ap_manager/conf/config.json')):
+    def __init__(self, config_file: Path = Path("/etc/ap_manager/conf/config.json")):
         self.config_file = config_file
         self.config = self.load_config()
-        self.config_dir = config_file.parent or self.config.get('conf_dir', '')
-        self.proc_dir = self.config.get('proc_dir', self.config_dir.parent / 'proc')
+        self.config_dir = config_file.parent or self.config.get("conf_dir", "")
+        self.proc_dir = self.config.get("proc_dir", self.config_dir.parent / "proc")
 
     def __enter__(self):
         # Ensure we are using update config
@@ -22,21 +22,35 @@ class ConfigManager:
 
     @property
     def dnsmasq_pidfile(self):
-        return Path(self.proc_dir) / 'dnsmasq.pid'
+        return Path(self.proc_dir) / "dnsmasq.pid"
 
     @property
     def hostapd_pidfile(self):
-        return Path(self.proc_dir) / 'hostapd.pid'
+        return Path(self.proc_dir) / "hostapd.pid"
 
     @property
     def dnsmasq_leasesfile(self):
-        return Path(self.proc_dir) / 'dnsmasq.leases'
+        return Path(self.proc_dir) / "dnsmasq.leases"
+
+    @property
+    def hostapd_logfile(self):
+        return (
+            self.config.get("hostapd_logfile", None)
+            or Path(self.proc_dir).parent / "hostapd.log"
+        )
+
+    @property
+    def dnsmasq_logfile(self):
+        return (
+            self.config.get("dnsmasq_logfile", None)
+            or Path(self.proc_dir).parent / "dnsmasq.log"
+        )
 
     def load_config(self):
         """Load configuration from file"""
         try:
             if self.config_file.exists():
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file, "r") as f:
                     self.config = json.load(f)
                     # self.config = {**self.default_config, **user_config}
             else:
@@ -47,17 +61,21 @@ class ConfigManager:
 
     def update_config(self):
         """Save configuration to file"""
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(self.config, f, indent=2)
 
     def save_config(self):
         """Save configuration to file"""
-        with open(self.config_file, 'w') as f:
+        with open(self.config_file, "w") as f:
             json.dump(self.config, f, indent=2)
 
     @property
     def __str__(self):
-        return '\n'.join(f"{k}={v}" for k, v in self.config.items()).strip() if self.config else None
+        return (
+            "\n".join(f"{k}={v}" for k, v in self.config.items()).strip()
+            if self.config
+            else None
+        )
 
     def _dict_update(self, d1: dict, d2: dict):
         """
@@ -67,7 +85,17 @@ class ConfigManager:
         """
         if not d1:
             d1 = self.config
-        return d1.update({k.lower(): v for k, v in d2.items() if v and k in config_manager.config.keys()}) if d1 and d2 else d1 or {}
+        return (
+            d1.update(
+                {
+                    k.lower(): v
+                    for k, v in d2.items()
+                    if v and k in config_manager.config.keys()
+                }
+            )
+            if d1 and d2
+            else d1 or {}
+        )
 
     @property
     def __bdir__(self):
