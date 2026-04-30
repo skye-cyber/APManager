@@ -36,17 +36,19 @@ def firewall_start(ctx, config_file):
             else:
                 console.print("[red]✗ Failed to start firewall[/red]")
         except Exception as e:
+            raise
             console.print(f"[red]Error: {e}[/red]")
 
 
 @firewall.command("stop")
+@click.option("--force", "-f", is_flag=True, help="Force reply yes")
 @click.option("--config-file", type=click.Path(exists=True), help="Custom config file")
 @click.pass_context
-def firewall_stop(ctx, config_file):
+def firewall_stop(ctx, force, config_file):
     """Stop firewall and captive portal"""
     config_file = config_file or ctx.obj["config"] or "/etc/ap_manager/conf/config.json"
 
-    if Confirm.ask("Stop firewall and captive portal?"):
+    if force or Confirm.ask("Stop firewall and captive portal?"):
         with console.status("[bold yellow]Stopping firewall..."):
             try:
                 config = BaseConfig(config_file=config_file)
@@ -66,10 +68,10 @@ def firewall_stop(ctx, config_file):
 @click.pass_context
 def firewall_status(ctx, config_file):
     """Show firewall status"""
-    config_file = config_file or ctx.obj["config"] or "/etc/ap_manager/conf/config.json"
+    config_file = config_file or ctx.obj["config"]
 
     try:
-        config = BaseConfig(config_file=config_file)
+        config = BaseConfig(config_file=config_file) if config_file else firewallconfig
         captive = Captive(config)
         result = captive.status()
         display_firewall_info(result)
@@ -82,10 +84,10 @@ def firewall_status(ctx, config_file):
 @click.pass_context
 def firewall_reset(ctx, config_file):
     """Show firewall status"""
-    config_file = config_file or ctx.obj["config"] or "/etc/ap_manager/conf/config.json"
+    config_file = config_file or ctx.obj["config"]
 
     try:
-        config = BaseConfig(config_file=config_file)
+        config = BaseConfig(config_file=config_file) if config_file else firewallconfig
         captive = Captive(config)
         result = captive.reset()
         display_firewall_info(result)
@@ -100,9 +102,11 @@ def firewall_debug(ctx, config_file):
     """Debug firewall and captive portal"""
     config_file = config_file or ctx.obj["config"] or "/etc/ap_manager/conf/config.json"
 
-    with console.status("[bold yellow]Running debug..."):
+    with console.status("[bold yellow]Running debug...\n"):
         try:
-            config = BaseConfig(config_file=config_file)
+            config = (
+                BaseConfig(config_file=config_file) if config_file else firewallconfig
+            )
             captive = Captive(config)
             captive.debug()
         except Exception as e:

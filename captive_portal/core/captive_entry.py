@@ -1,6 +1,6 @@
 from .start import startcaptive
 from .stop import stopcaptive
-from .config import BaseConfig
+from .config import BaseConfig, baseconfig
 from .firewall import firewall
 from .setup import captivesetup
 from typing import Dict, Any, Optional, List
@@ -9,9 +9,9 @@ from ap_utils.colors import fg
 
 
 class Captive:
-    def __init__(self, config: Optional[BaseConfig] = None, **kwargs):
+    def __init__(self, config: BaseConfig = baseconfig):
         """Initialize Captive portal with optional configuration"""
-        self.config = config if config else BaseConfig(**kwargs)
+        self.config = config
         self.firewall = firewall
         self.setup = captivesetup
 

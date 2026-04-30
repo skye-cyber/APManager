@@ -3,12 +3,12 @@ from pathlib import Path
 
 from .setup import captivesetup
 from .firewall import firewall
-from .config import BaseConfig
+from .config import baseconfig, BaseConfig
 
 
 class StartCaptive:
-    def __init__(self, config: BaseConfig = BaseConfig()):
-        self.config = config if config else BaseConfig()
+    def __init__(self, config: BaseConfig = baseconfig):
+        self.config = config if config else baseconfig
         self.interface = self.config.CLIENT_INTERFACE
         self.log_file = Path("/etc/ap_manager/captive.log")
         self.dnsmasq_logfile = self.config.dnsmasq_logfile

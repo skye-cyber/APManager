@@ -2,15 +2,15 @@ import subprocess
 import re
 from typing import List, Callable, Optional
 from ap_utils.colors import fg
-from .config import BaseConfig
+from .config import BaseConfig, baseconfig
 from .error import ErrorHandler
 
 error_handler = ErrorHandler("CaptiveStart")
 
 
 class Firewall:
-    def __init__(self, config: BaseConfig = BaseConfig()):
-        self.config = config if config else BaseConfig()
+    def __init__(self, config: BaseConfig = baseconfig):
+        self.config = config
         self.client_interface = self.config.CLIENT_INTERFACE
         self.internet_interface = self.config.INTERNET_INTERFACE
         self.BASE_DIR = self.config.BASE_DIR
@@ -144,7 +144,7 @@ class Firewall:
 
         print("\tRouting table:")
         subprocess.run(["ip", "route", "show"], check=True)
-        subprocess.run([], check=True)
+        # subprocess.run([], check=True)
 
     def process_macs(
         self,
