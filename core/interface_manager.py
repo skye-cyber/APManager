@@ -37,10 +37,25 @@ class InterfaceManager:
 
         self.virt_diems = "Maybe your WiFi adapter does not fully support virtual interfaces. Try again with --no-virt."
 
-    def initialize_access_point(self, progress_fn=None):
+    def initialize_access_point(
+        self, progress_fn=None, no_services=False, no_setup=False
+    ):
         self.progress_fn = progress_fn  # Used to update click ui status
         """Initialize the access point with proper configuration"""
         try:
+            if no_setup:
+                if not self.ap_manager.is_wifi_interface(
+                    self.config.get("vwifi_iface")
+                ):
+                    return self.clean.die(
+                        "Interface Must be setup first before running with no_setup."
+                    )
+                netservice.configure()
+                # Start services [dnsmasq, dns, internet sharing]
+                netservice.start()
+                # Start [hostapd] services
+                return self.start_apmanager_service()
+
             # Lock mutex for thread safety
             self.lock.mutex_lock()
 
@@ -95,11 +110,16 @@ class InterfaceManager:
 
             self.update_configuration()
 
+            self.save_iface_info(pid_file)
+
+            if no_services:
+                # Exit here
+                return True
+
             netservice.configure()
 
             # Start services [dnsmasq, dns, internet sharing]
             netservice.start()
-            self.save_iface_info(pid_file)
 
             # Start [hostapd] services
             return self.start_apmanager_service()
@@ -107,8 +127,12 @@ class InterfaceManager:
             self.clean.die(f"AP Initialization failed: {str(e)}")
 
     def stop_accesspoint(self) -> bool:
-        # shared.stop_service("hostapd")
+        shared.kill_dnsmasq()
         return shared.stop_service("apmanager_hostapd")
+
+    def reset_accesspoint(self, hard_reset=False) -> bool:
+        # Soft reset
+        return self.clean.cleanup(hard_reset=hard_reset)
 
     def start_apmanager_service(self) -> bool:
         try:
@@ -186,7 +210,9 @@ class InterfaceManager:
                     and self.netmanager.NM_OLDER_VERSION == 0
                 ):
                     print(
-                        f"Network Manager found, set {self.config['vwifi_iface']} as unmanaged device... "
+                        f"Network Manager found, set {
+                            self.config['vwifi_iface']
+                        } as unmanaged device... "
                     )
                     try:
                         self.netmanager.networkmanager_add_unmanaged(
@@ -233,7 +259,9 @@ class InterfaceManager:
                     else:
                         # Fallback to currently connected channel
                         print(
-                            f"multiple channels not supported, fallback to channel: {wifi_iface_channel}"
+                            f"multiple channels not supported, fallback to channel: {
+                                wifi_iface_channel
+                            }"
                         )
                         self.config.update({"channel": wifi_iface_channel})
                         if self.can_transmit_to_channel(
@@ -244,15 +272,36 @@ class InterfaceManager:
                             )
                         else:
                             self.clean.die(
-                                f"Your adapter can not transmit to channel {self.config['channel']}, "
+                                f"Your adapter can not transmit to channel {
+                                    self.config['channel']
+                                }, "
                                 f"frequency band {self.config['freq_band']}GHz."
                             )
                 else:
                     print(f"channel: {self.config['channel']}")
             else:
                 print(
-                    f"Custom frequency band set to {self.config['freq_band']}Ghz and channel {self.config['channel']}"
+                    f"Custom frequency band set to {
+                        self.config['freq_band']
+                    }Ghz and channel {self.config['channel']}"
                 )
+
+    def delete_virtual_interface(self):
+        try:
+            if not self.interface_exists(self.config["vwifi_iface"]):
+                # Create the virtual interface using iw command
+                command.run(
+                    ["iw", "dev", self.config["wifi_iface"], "interface", "del"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    force_return=True,
+                )
+        except Exception as e:
+            self.clean.die(
+                f"{fg.RED}Error during virtual interface deletion: "
+                f"{fg.LRED}{str(e)}{fg.RESET}"
+            )
 
     def create_virtual_interface(self):
         """Create a virtual WiFi interface with proper configuration"""
@@ -321,13 +370,17 @@ class InterfaceManager:
                 self.config["vwifi_iface"]
             ):
                 print(
-                    f"Network Manager found, set {self.config['vwifi_iface']} as unmanaged device... "
+                    f"Network Manager found, set {
+                        self.config['vwifi_iface']
+                    } as unmanaged device... "
                 )
                 unmanaged = self.netmanager.networkmanager_add_unmanaged(
                     self.config["vwifi_iface"]
                 )
                 print(
-                    f"{fg.BYELLOW}{self.config['vwifi_iface']}{fg.RESET} State: {fg.GREEN}{'unmanaged' if unmanaged else 'managed'}{fg.RESET}"
+                    f"{fg.BYELLOW}{self.config['vwifi_iface']}{fg.RESET} State: {
+                        fg.GREEN
+                    }{'unmanaged' if unmanaged else 'managed'}{fg.RESET}"
                 )
 
                 if self.netmanager.networkmanager_is_running():
@@ -338,7 +391,9 @@ class InterfaceManager:
                     print(" - DONE")
             else:
                 print(
-                    f"Interface {self.config['vwifi_iface']} is already UNMANAGED. Skip..."
+                    f"Interface {
+                        self.config['vwifi_iface']
+                    } is already UNMANAGED. Skip..."
                 )
         else:
             print("NetworkMnager not found")
@@ -346,7 +401,9 @@ class InterfaceManager:
     def initialize_wifi_interface(self):
         """Initialize the WiFi interface with proper configuration"""
         print(
-            f"Initialize wifi: {fg.YELLOW}{self.config['vwifi_iface']}{fg.RESET} on {fg.BWHITE}{self.config['internet_iface']}{fg.RESET}"
+            f"Initialize wifi: {fg.YELLOW}{self.config['vwifi_iface']}{fg.RESET} on {
+                fg.BWHITE
+            }{self.config['internet_iface']}{fg.RESET}"
         )
 
         try:

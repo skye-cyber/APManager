@@ -22,19 +22,28 @@ def hotspot():
 
 
 @hotspot.command("start")
-@click.option("--wifi-iface", default="wlan0", help="WiFi interface to use")
-@click.option("--internet-iface", default="wlan0", help="Internet-facing interface")
+@click.option("--wifi-iface", help="WiFi interface to use")
+@click.option("--internet-iface", help="Internet-facing interface")
 @click.option("--ssid", help="SSID for the hotspot")
 @click.option("--password", help="Password for the hotspot")
-@click.option("--channel", default=6, type=int, help="Channel number")
+@click.option("--channel", type=int, help="Channel number")
 @click.option(
     "--share-method",
     type=click.Choice(["nat", "bridge", "none"]),
-    default="nat",
     help="Internet sharing method",
 )
 @click.option("--no-virt", is_flag=True, help="Do not create virtual interface")
-@click.option("--daemon", "-d", is_flag=True, help="Run in background")
+@click.option("--daemon", is_flag=True, help="Run in background")
+@click.option(
+    "--no-services",
+    is_flag=True,
+    help="Do not start hostapd,dnsmasq services",
+)
+@click.option(
+    "--no-setup",
+    is_flag=True,
+    help="Skip interface setup-- only starts services",
+)
 @click.pass_context
 def hotspot_start(
     ctx,
@@ -46,6 +55,8 @@ def hotspot_start(
     share_method,
     no_virt,
     daemon,
+    no_services,
+    no_setup,
 ):
     """Start the hotspot"""
     cli_obj = ctx.obj["cli"]
@@ -78,7 +89,11 @@ def hotspot_start(
                 if desc:
                     return progress.update(task, description=desc)
 
-            success = cli_obj.manager.setup_accesspoint(progress_fn=progress_callback)
+            success = cli_obj.manager.setup_accesspoint(
+                progress_fn=progress_callback,
+                no_services=no_services,
+                no_setup=no_setup,
+            )
             progress.update(task, completed=100)
 
             if success:
@@ -104,10 +119,11 @@ def hotspot_start(
                     Panel.fit(
                         "[bold green]✓ Hotspot started successfully![/bold green]\n\n"
                         f"[cyan]SSID:[/cyan] {config['ssid'] or 'From config'}\n"
+                        f"[cyan]AP Interface[/cyan] {config['vwifi_iface']}\n"
                         f"[cyan]Net Interface:[/cyan] {config['internet_iface']}\n"
-                        f"[cyan]Sharing Method:[/cyan] {config['share_method']} from {config['internet_iface']}\n"
-                        f"[cyan]DNSMASQ PID:[/cyan] {dnsamasq_pid}\n"
-                        f"[cyan]HOSTAPD PID:[/cyan] {hostapd_pid}\n",
+                        f"[cyan]Sharing Method:[/cyan] {config['share_method']}\n"
+                        f"[cyan]DNSMASQ PID:[/cyan] {dnsamasq_pid or '-'}\n"
+                        f"[cyan]HOSTAPD PID:[/cyan] {hostapd_pid or '-'}\n",
                         title="AccessPoint Status",
                     )
                 )
@@ -118,28 +134,37 @@ def hotspot_start(
 
 
 @hotspot.command("stop")
-@click.option("--force", "-f", is_flag=True, help="Force reply yes")
 @click.pass_context
-def hotspot_stop(ctx, force):
+def hotspot_stop(ctx):
     """Stop the hotspot"""
     cli_obj = ctx.obj["cli"]
 
-    if force or Confirm.ask("Stop the hotspot?"):
-        with console.status("[bold yellow]Stopping hotspot..."):
-            success = cli_obj.manager.stop_accesspoint()
-
+    with console.status("[bold yellow]Stopping hotspot..."):
+        success = cli_obj.manager.stop_accesspoint()
         if success:
             console.print("[green]✓ Hotspot stopped[/green]")
         else:
             console.print("[red]✗ Failed to stop hotspot[/red]")
 
 
-# @hotspot.command("restart")
-# @click.pass_context
-# def hotspot_restart(ctx):
-#     """Restart the hotspot."""
-#     ctx.invoke(hotspot_stop, force=True)
-#     ctx.invoke(hotspot_start)
+@hotspot.command("reset")
+@click.option("--force", "-f", is_flag=True, help="Force reply yes")
+@click.option("--hard", is_flag=True, help="Hard reset (deletes virtual interface)")
+@click.pass_context
+def hotspot_reset(ctx, force, hard):
+    """Stop the hotspot"""
+    cli_obj = ctx.obj["cli"]
+
+    if force or Confirm.ask("Reset accesspoint?"):
+        with console.status("[bold yellow]Resetting accesspoint..."):
+            success = cli_obj.manager.reset_accesspoint(hard_reset=hard)
+
+        if success:
+            console.print(
+                f"[green]✓ {'Hard reset' if hard else 'Reset'} complete[/green]"
+            )
+        else:
+            console.print("[red]✗ Failed to reset accesspoint[/red]")
 
 
 @hotspot.command("status")
@@ -257,9 +282,6 @@ def config_edit(ctx, editor):
         console.print(f"[green]✓ Edited {config_file}[/green]")
     else:
         console.print("[red]No configuration file loaded[/red]")
-
-
-# ==================== INFO COMMANDS ====================
 
 
 @cli.command("version")

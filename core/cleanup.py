@@ -392,46 +392,49 @@ class CleanupManager(SignalHandler):
         return False
 
     def clean_interfaces(self):
-        # Cleanup virtual interface if not disabled
-        if (
-            not self.no_virt
-            and self.vwifi_iface
-            and self.ap_man.interface_manager.interface_exists(self.vwifi_iface)
-        ):
-            subprocess.run(
-                ["ip", "link", "set", "down", "dev", self.vwifi_iface], check=False
-            )
-            subprocess.run(["ip", "addr", "flush", self.vwifi_iface], check=False)
-
-            self.networkmanager_rm_unmanaged_if_needed(
-                self.vwifi_iface, self.old_macaddr
-            )
-
-            subprocess.run(["iw", "dev", self.vwifi_iface, "del"], check=False)
-
-            self.ap_man.dalloc_iface(self.vwifi_iface)
-        else:
-            # Cleanup main interface
-            subprocess.run(
-                ["ip", "link", "set", "down", "dev", self.wifi_iface], check=False
-            )
-            subprocess.run(["ip", "addr", "flush", self.wifi_iface], check=False)
-            if self.new_macaddr and self.old_macaddr:
+        try:
+            # Cleanup virtual interface if not disabled
+            if (
+                not self.no_virt
+                and self.vwifi_iface
+                and self.ap_man.interface_manager.interface_exists(self.vwifi_iface)
+            ):
                 subprocess.run(
-                    [
-                        "ip",
-                        "link",
-                        "set",
-                        "dev",
-                        self.wifi_iface,
-                        "address",
-                        self.old_macaddr,
-                    ],
-                    check=False,
+                    ["ip", "link", "set", "down", "dev", self.vwifi_iface], check=False
                 )
-            self.networkmanager_rm_unmanaged_if_needed(
-                self.wifi_iface, self.old_macaddr
-            )
+                subprocess.run(["ip", "addr", "flush", self.vwifi_iface], check=False)
+
+                self.networkmanager_rm_unmanaged_if_needed(
+                    self.vwifi_iface, self.old_macaddr
+                )
+
+                subprocess.run(["iw", "dev", self.vwifi_iface, "del"], check=False)
+
+                self.ap_man.dalloc_iface(self.vwifi_iface)
+            else:
+                # Cleanup main interface
+                subprocess.run(
+                    ["ip", "link", "set", "down", "dev", self.wifi_iface], check=False
+                )
+                subprocess.run(["ip", "addr", "flush", self.wifi_iface], check=False)
+                if self.new_macaddr and self.old_macaddr:
+                    subprocess.run(
+                        [
+                            "ip",
+                            "link",
+                            "set",
+                            "dev",
+                            self.wifi_iface,
+                            "address",
+                            self.old_macaddr,
+                        ],
+                        check=False,
+                    )
+                self.networkmanager_rm_unmanaged_if_needed(
+                    self.wifi_iface, self.old_macaddr
+                )
+        except Exception as e:
+            print(f"{fg.RED}{e}{fg.RESET}")
 
     def restore_forwarding_config(self):
         # Check if we're the last instance using this internet interface
@@ -462,7 +465,7 @@ class CleanupManager(SignalHandler):
                 shutil.copyfileobj(src, dst)
                 os.remove(forwarding_file)
 
-    def _cleanup(self):
+    def _cleanup(self, hard_reset=True) -> bool:
         """Internal cleanup function that performs all cleanup operations."""
         # Disable signal handling during cleanup
         # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -501,20 +504,15 @@ class CleanupManager(SignalHandler):
 
             self.clean_hostapd()
 
-            # Stop ap_manager service -> delegated to interface_manager
-            # shared.stop_service('ap_manager')
-            # shared.kill_service('hostapd') ap_manager service shall terminate the proccess
-
-            try:
-                # Clean interfaces
+            # Clean interfaces
+            if hard_reset:
                 self.clean_interfaces()
-            except Exception as e:
-                print(f"{fg.RED}{e}{fg.RESET}")
 
             # Perfrom basic leanup
-            self._basic_cleanup()
+            return self._basic_cleanup()
         except Exception as e:
             print(f"{fg.RED}{e}{fg.RESET}")
+            return False
         finally:
             self.lock.mutex_unlock()
             self.lock.cleanup_lock()
@@ -527,15 +525,15 @@ class CleanupManager(SignalHandler):
             ):
                 os.remove(self.daemon_pidfile)
 
-    def cleanup(self):
+    def cleanup(self, hard_reset=True) -> bool:
         """Public cleanup function that provides user feedback."""
-        print("\nDoing cleanup...", end="\n", flush=True)
+        print("\nPerform full cleanup", end="\n", flush=True)
         try:
-            self._cleanup()
+            return self._cleanup(hard_reset=hard_reset)
         except Exception as e:
-            print(f"cleanup failed: {str(e)}")
+            print(f"Full cleanup failed: {str(e)}")
             # Still try to do basic cleanup even if main cleanup fails
-            self._basic_cleanup()
+            return self._basic_cleanup()
 
     def _die_(self, message: Optional[str] = None):
         """Handle fatal errors and exit."""
@@ -546,9 +544,8 @@ class CleanupManager(SignalHandler):
             os.kill(os.getppid(), signal.SIGUSR2)
         sys.exit(1)
 
-    def _basic_cleanup(self):
+    def _basic_cleanup(self) -> bool:
         """Basic cleanup that should always work."""
-        print("Start Basic cleanup ...")
         try:
             # Kill any remaining processes
             if os.path.exists(self.proc_dir):
@@ -561,14 +558,14 @@ class CleanupManager(SignalHandler):
                             pass
 
             try:
-                if os.path.exists(self.COUNTER_LOCK_FILE):
-                    os.remove(self.COUNTER_LOCK_FILE)
+                if os.path.exists(self.ap_man.COUNTER_LOCK_FILE):
+                    os.remove(self.ap_man.COUNTER_LOCK_FILE)
             except OSError:
                 pass
 
-            print("basic cleanup completed")
+            return True
         except Exception:
-            pass
+            return False
 
     def rm_proc(self, pid_path):
         # Clean proccess with its files

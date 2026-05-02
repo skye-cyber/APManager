@@ -84,6 +84,8 @@ class ConfigManager:
             "GATEWAY": self.GATEWAY,
             "SUBNET": self.get_subnet(),
             "CAPTIVE_PORT": self.CAPTIVE_PORT,
+            "SCAN_INTERVAL": self.SCAN_INTERVAL,
+            "USE_API": self.USE_API,
             "CLIENT_INTERFACE": self.CLIENT_INTERFACE,
             "INTERNET_INTERFACE": self.INTERNET_INTERFACE,
             "AUTH_DIR": str(self.AUTH_DIR),

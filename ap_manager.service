@@ -9,10 +9,9 @@ WorkingDirectory=/etc/ap_manager/
 # Ensure executable exists first
 # ExecStartPre=ls /usr/local/bin/ap_manager 2>/dev/null
 ExecStart=/usr/local/bin/ap_manager hotspot start
-ExecStop=/usr/local/bin/ap_manager hotspot stop --force
+ExecStop=/usr/local/bin/ap_manager hotspot reset --force
 ExecStartPost=/bin/sleep 2
-# Reload sends SIGHUP
-ExecReload=/usr/bin/bash -c "/usr/local/bin/ap_manager hotspot stop --force && /usr/local/bin/ap_manager hotspot start"
+ExecReload=/usr/bin/bash -c "/usr/local/bin/ap_manager hotspot stop && /usr/local/bin/ap_manager hotspot start --no-setup"
 KillMode=mixed
 KillSignal=SIGTERM
 TimeoutStopSec=10

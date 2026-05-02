@@ -42,7 +42,7 @@ class DeviceMonitorTUI:
         self.interface_stats = {}
         self.interface_stats_lock = threading.Lock()
         self.event_queue = queue.Queue()
-
+        self.isFirstRun = True
         self.keyboard_handler = SimpleKeyboardHandler(self)
 
         self.selected_index = 0
@@ -78,7 +78,9 @@ class DeviceMonitorTUI:
                             last_layout_time = current_time
 
                         # Perform scan at interval
-                        if current_time - last_scan_time > configmanager.SCAN_INTERVAL:
+                        if current_time - last_scan_time >= int(
+                            configmanager.SCAN_INTERVAL
+                        ):
                             self._perform_scan()
                             last_scan_time = current_time
                             live.update(
@@ -106,10 +108,11 @@ class DeviceMonitorTUI:
             try:
                 self._perform_scan()
                 writer.write(f"Loop Scan:\n{configmanager.SCAN_INTERVAL}")
-                time.sleep(configmanager.SCAN_INTERVAL)
+                if not self.isFirstRun:
+                    time.sleep(int(configmanager.SCAN_INTERVAL))
             except Exception as e:
                 self.console.print(f"[red]Scan error: {e}[/red]")
-                time.sleep(5)
+                time.sleep(3)
 
     def _ui_loop(self):
         """Background UI update loop"""
@@ -237,12 +240,12 @@ class DeviceMonitorTUI:
             show_header=True, header_style="bold magenta", box=box.ROUNDED, expand=True
         )
 
-        table.add_column("IP", style="cyan", width=19)
-        table.add_column("MAC", style="#0055ff", width=20)
-        table.add_column("Status", width=12)
-        table.add_column("State", style="#ffff7f", width=12)
+        table.add_column("IP", style="cyan", width=20)
+        table.add_column("MAC", style="#0055ff", width=22)
+        table.add_column("AUTH", width=8)
+        table.add_column("State", style="#ffff7f", width=15)
         table.add_column("Hostname", style="green", width=20)
-        table.add_column("Vendor", style="yellow", width=20)
+        table.add_column("Vendor", style="yellow", width=18)
         table.add_column("Seen", style="dim white", width=9)
 
         with self.devices_lock:
@@ -309,9 +312,9 @@ class DeviceMonitorTUI:
             else:
             """
             if device.authenticated:
-                status_display = "[green]✓ AUTH[/green]"
+                status_display = "[green]✓[/green]"
             else:
-                status_display = "[red]✗ BLOCKED[/red]"
+                status_display = "[red]✗[/red]"
 
             table.add_row(
                 f"{cursor}{device.ip}",

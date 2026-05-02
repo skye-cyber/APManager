@@ -90,16 +90,21 @@ class ApManager:
 
         self.iface_dir = os.path.join(self.config["base_dir"], "ifaces")
 
-        self.virt_diems = "Maybe your WiFi adapter does not fully support virtual interfaces. Try again with --no-virt."
+        self.virt_diems = "Your WiFi adapter may not fully support virtual interfaces. Try again with --no-virt."
 
         # Increase resource limits to prevent file descriptor issues
         increase_resource_limits()
 
-    def setup_accesspoint(self, progress_fn=None):
+    def setup_accesspoint(self, progress_fn=None, no_services=False, no_setup=False):
         """Initialize the access point with proper configuration."""
         try:
             # Use the new interface manager to initialize the access point
-            self.interface_manager.initialize_access_point(progress_fn=progress_fn)
+            self.interface_manager.initialize_access_point(
+                progress_fn=progress_fn, no_services=no_services, no_setup=no_setup
+            )
+
+            if no_setup:
+                return True
 
             # Print configuration information
             if self.config["hidden"]:
@@ -127,7 +132,6 @@ class ApManager:
         )
         if self.config["no_haveged"]:
             self.haveged_watchdog()
-            # HAVEGED_WATCHDOG_PID =
 
     # Method moved to InterfaceManager
     def make_unmanaged(self):
@@ -534,9 +538,11 @@ class ApManager:
 
     def stop_accesspoint(self):
         """Stop the hotspot using appropriate network management tools."""
-        self.interface_manager.stop_accesspoint()
-        print(f"Stopping {self.config['vwifi_iface']}...")
-        return self.clean.clean_exit("Stopping ap manager...")
+        return self.interface_manager.stop_accesspoint()
+
+    def reset_accesspoint(self, hard_reset):
+        """Stop the hotspot using appropriate network management tools."""
+        return self.interface_manager.reset_accesspoint(hard_reset=hard_reset)
 
     # Methods moved to InterfaceManager
     def is_5ghz_frequency(self, freq=None):
@@ -635,7 +641,6 @@ class ApManager:
     def start_haveged_watchdog(self):
         return self.process_manager.start_haveged_watchdog()
 
-    # Methods moved to ProcessManager
     def get_wifi_iface_from_pid(self, pid: str) -> Optional[str]:
         return self.process_manager.get_wifi_iface_from_pid(pid)
 

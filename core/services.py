@@ -596,10 +596,9 @@ class NetServices:
 
         # Start hostapd in the background
         try:
-            if (
-                not self.config.get("daemon", False) or 1 == 2
-            ):  # For now alway run in foreground
-                return self.hostapd_daemonize(hostapd_cmd)
+            if self.config.get("daemon", False):  # For now alway run in foreground
+                return shared.start_service("apmanager_hostapd.service", restart=True)
+                # return self.hostapd_daemonize(hostapd_cmd)
             else:
                 if progress_fn:
                     progress_fn(
