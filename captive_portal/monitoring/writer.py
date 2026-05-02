@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from ..core.config import configmanager
 
 
 class Writer:
@@ -10,14 +11,14 @@ class Writer:
         if self.dir_exists():
             self.create_file()
 
-        with open(self.file, 'w') as f:
+        with open(self.file, "w") as f:
             f.write(">>>>>>>>>>>>>New Log>>>>>>>>>>\n")
             f.write(f"{data}\n")
 
         return self.file
 
     def read(self) -> str:
-        with open(self.file, 'w') as f:
+        with open(self.file, "w") as f:
             return f.read()
 
     def file_exists(self) -> bool:
@@ -31,4 +32,4 @@ class Writer:
         return True
 
 
-writer = Writer((Path(__file__).parent.parent.parent / 'logs/monitoring.log').as_posix())
+writer = Writer((configmanager.BASE_DIR / "logs/monitoring.log").as_posix())

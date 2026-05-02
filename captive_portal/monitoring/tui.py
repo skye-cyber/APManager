@@ -1,6 +1,7 @@
 """
 Device Monitor with TUI - Real-time network device monitoring
 """
+
 import sys
 import os
 import time
@@ -10,9 +11,6 @@ import socket
 import subprocess
 from typing import Dict
 from datetime import datetime
-from collections import defaultdict
-
-# Rich for TUI
 from rich.console import Console
 from rich.live import Live
 from rich.table import Table
@@ -21,22 +19,20 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.align import Align
 from rich import box
-from rich.style import Style
-from .config import Config
 from .device import Device
 from .netmonitor import NetworkScanner
-from .datasources import DataSource, FileDataSource, APIDataSource
+from .datasources import AbstractAPI, FileApi
 from .datasources import HAS_REQUESTS
 from .writer import writer
 from .keyboard_handler import SimpleKeyboardHandler
+from ..core.config import configmanager
 
-# ==================== TUI Components ====================
 
 class DeviceMonitorTUI:
     """Terminal UI for device monitoring"""
 
-    def __init__(self, data_source: DataSource, scanner: NetworkScanner):
-        self.data_source = data_source
+    def __init__(self, API: AbstractAPI, scanner: NetworkScanner):
+        self.API = API
         self.scanner = scanner
         self.console = Console()
         self.devices: Dict[str, Device] = {}
@@ -69,7 +65,9 @@ class DeviceMonitorTUI:
         last_layout_time = 0
 
         try:
-            with Live(self._generate_layout(), refresh_per_second=4, screen=True) as live:
+            with Live(
+                self._generate_layout(), refresh_per_second=4, screen=True
+            ) as live:
                 while self.running:
                     try:
                         current_time = time.time()
@@ -80,10 +78,12 @@ class DeviceMonitorTUI:
                             last_layout_time = current_time
 
                         # Perform scan at interval
-                        if current_time - last_scan_time > Config.SCAN_INTERVAL:
+                        if current_time - last_scan_time > configmanager.SCAN_INTERVAL:
                             self._perform_scan()
                             last_scan_time = current_time
-                            live.update(self._generate_layout())  # Immediate update after scan
+                            live.update(
+                                self._generate_layout()
+                            )  # Immediate update after scan
 
                         # Update UI
                         # live.update(self._generate_layout())
@@ -105,8 +105,8 @@ class DeviceMonitorTUI:
         while self.running:
             try:
                 self._perform_scan()
-                writer.write(f"Loop Scan:\n{Config.SCAN_INTERVAL}")
-                time.sleep(Config.SCAN_INTERVAL)
+                writer.write(f"Loop Scan:\n{configmanager.SCAN_INTERVAL}")
+                time.sleep(configmanager.SCAN_INTERVAL)
             except Exception as e:
                 self.console.print(f"[red]Scan error: {e}[/red]")
                 time.sleep(5)
@@ -123,7 +123,7 @@ class DeviceMonitorTUI:
     def _perform_scan(self):
         """Perform network scan and update devices - FIXED"""
         # Get authenticated MACs
-        auth_macs = set(self.data_source.get_authenticated_macs())
+        auth_macs = set(self.API.get_authenticated_macs())
 
         # Scan network
         devices_data = self.scanner.scan_arp()
@@ -171,24 +171,25 @@ class DeviceMonitorTUI:
         layout.split_column(
             Layout(name="header", size=3),
             Layout(name="main", ratio=1),
-            Layout(name="footer", size=3)
+            Layout(name="footer", size=3),
         )
 
         # Header
         header_panel = Panel(
             Align.center(
-                Text("📡 DEVICE MONITOR - Real-time Network Dashboard",
-                     style="bold cyan"),
-                vertical="middle"
+                Text(
+                    "📡 DEVICE MONITOR - Real-time Network Dashboard", style="bold cyan"
+                ),
+                vertical="middle",
             ),
-            border_style="cyan"
+            border_style="cyan",
         )
         layout["header"].update(header_panel)
 
         # Main content (split into left and right)
         layout["main"].split_row(
             Layout(name="devices", ratio=4),  # 4 parts out of 6 = ~67%
-            Layout(name="stats", ratio=2)  # 2 parts out of 6 = ~33%
+            Layout(name="stats", ratio=2),  # 2 parts out of 6 = ~33%
         )
 
         # Devices table
@@ -198,7 +199,7 @@ class DeviceMonitorTUI:
                 devices_table,
                 title=f"[bold]Connected Devices ({len(self.devices)})[/bold]",
                 border_style="green",
-                padding=(1, 1)
+                padding=(1, 1),
                 # expand=True
             )
         )
@@ -210,7 +211,7 @@ class DeviceMonitorTUI:
                 stats_panel,
                 title="[bold]Network Statistics[/bold]",
                 border_style="blue",
-                padding=(1, 1)
+                padding=(1, 1),
             )
         )
 
@@ -220,14 +221,12 @@ class DeviceMonitorTUI:
         footer_text.append(" [A]uthenticate ", style="bold white on green")
         footer_text.append(" [B]lock ", style="bold white on #a16b00")
         footer_text.append(" [R]efresh ", style="bold white on blue")
-        footer_text.append(f" Last scan: {self.last_scan.strftime('%H:%M:%S')} ",
-                           style="dim white")
+        footer_text.append(
+            f" Last scan: {self.last_scan.strftime('%H:%M:%S')} ", style="dim white"
+        )
 
         layout["footer"].update(
-            Panel(
-                Align.center(footer_text),
-                border_style="dim white"
-            )
+            Panel(Align.center(footer_text), border_style="dim white")
         )
 
         return layout
@@ -235,10 +234,7 @@ class DeviceMonitorTUI:
     def _generate_devices_table_with_selection(self) -> Table:
         """Generate devices table - clean version with text-only selection"""
         table = Table(
-            show_header=True,
-            header_style="bold magenta",
-            box=box.ROUNDED,
-            expand=True
+            show_header=True, header_style="bold magenta", box=box.ROUNDED, expand=True
         )
 
         table.add_column("IP", style="cyan", width=19)
@@ -256,12 +252,13 @@ class DeviceMonitorTUI:
         def ip_sort_key(device):
             try:
                 ip_part = device.ip
-                if '[' in ip_part:
+                if "[" in ip_part:
                     import re
-                    ip_match = re.search(r'(\d+\.\d+\.\d+\.\d+)', ip_part)
+
+                    ip_match = re.search(r"(\d+\.\d+\.\d+\.\d+)", ip_part)
                     if ip_match:
                         ip_part = ip_match.group(1)
-                return tuple(map(int, ip_part.split('.')))
+                return tuple(map(int, ip_part.split(".")))
             except Exception:
                 return (255, 255, 255, 255)
 
@@ -296,7 +293,7 @@ class DeviceMonitorTUI:
                 # highlight_color = "cyan"
                 cursor = "▶"
 
-            '''
+            """
                 # All text in highlight color (status loses its green/red)
                 status_text = "✓ AUTH" if device.authenticated else "✗ BLOCKED"
 
@@ -310,7 +307,7 @@ class DeviceMonitorTUI:
                     f"[{highlight_color}]{seen}[/]"
                 )
             else:
-            '''
+            """
             if device.authenticated:
                 status_display = "[green]✓ AUTH[/green]"
             else:
@@ -323,7 +320,7 @@ class DeviceMonitorTUI:
                 state,
                 hostname,
                 vendor,
-                seen
+                seen,
             )
 
         return table
@@ -331,32 +328,36 @@ class DeviceMonitorTUI:
     def _generate_devices_table(self) -> Table:
         """Generate devices table"""
         table = Table(
-            show_header=True,
-            header_style="bold magenta",
-            box=box.ROUNDED,
-            expand=True
+            show_header=True, header_style="bold magenta", box=box.ROUNDED, expand=True
         )
 
-        table.add_column("IP", style="cyan", width=19)
-        table.add_column("MAC", style="#0055ff", width=20)
-        table.add_column("Status", width=12)
+        table.add_column("IP", style="cyan", width=22)
+        table.add_column("MAC", style="#0055ff", width=26)
+        table.add_column("AUTH", width=12)
         table.add_column("State", style="#ffff7f", width=12)
-        table.add_column("Hostname", style="green", width=20)
-        table.add_column("Vendor", style="yellow", width=20)
-        table.add_column("Seen", style="dim white", width=9)
+        table.add_column("Hostname", style="green", width=21)
+        table.add_column("Vendor", style="yellow", width=21)
+        table.add_column("Seen", style="dim white", width=11)
 
         with self.devices_lock:
             devices_copy = list(self.devices.values())
 
         # Sort devices by IP
-        sorted_devices = sorted(devices_copy, key=lambda d: socket.inet_aton(d.ip.split('/')[0]) if d.ip.replace('.', '').isdigit() else '255.255.255.255')
+        sorted_devices = sorted(
+            devices_copy,
+            key=lambda d: (
+                socket.inet_aton(d.ip.split("/")[0])
+                if d.ip.replace(".", "").isdigit()
+                else "255.255.255.255"
+            ),
+        )
 
         for idx, device in enumerate(sorted_devices, 1):
             # Status with color
             if device.authenticated:
-                status = "[green]✓ AUTH[/green]"
+                status = "[green]✓[/green]"
             else:
-                status = "[red]✗ BLOCKED[/red]"
+                status = "[red]✗[/red]"
 
             state = device.state
 
@@ -392,7 +393,7 @@ class DeviceMonitorTUI:
                 state,
                 hostname,
                 vendor,
-                seen
+                seen,
             )
 
         return table
@@ -412,24 +413,32 @@ class DeviceMonitorTUI:
 
         # Interface stats
         if self.interface_stats:
-            rx_mb = self.interface_stats.get('rx_bytes', 0) / 1024 / 1024
-            tx_mb = self.interface_stats.get('tx_bytes', 0) / 1024 / 1024
+            rx_mb = self.interface_stats.get("rx_bytes", 0) / 1024 / 1024
+            tx_mb = self.interface_stats.get("tx_bytes", 0) / 1024 / 1024
 
-            stats.append(f"[bold]Interface {Config.INTERFACE}:[/bold]")
-            stats.append(f"  RX: {rx_mb:.2f} MB ({self.interface_stats.get('rx_packets', 0)} packets)")
-            stats.append(f"  TX: {tx_mb:.2f} MB ({self.interface_stats.get('tx_packets', 0)} packets)")
+            stats.append(f"[bold]Interface {configmanager.CLIENT_INTERFACE}:[/bold]")
+            stats.append(
+                f"  RX: {rx_mb:.2f} MB ({
+                    self.interface_stats.get('rx_packets', 0)
+                } packets)"
+            )
+            stats.append(
+                f"  TX: {tx_mb:.2f} MB ({
+                    self.interface_stats.get('tx_packets', 0)
+                } packets)"
+            )
         else:
             stats.append("[yellow]Interface stats unavailable[/yellow]")
 
         stats.append("")
 
         # Data source info
-        if isinstance(self.data_source, FileDataSource):
-            stats.append(f"[dim]Data source: File ({Config.AUTH_FILE})[/dim]")
+        if isinstance(self.API, FileApi):
+            stats.append(f"[dim]Data source: FileApi ({configmanager.AUTH_FILE})[/dim]")
         else:
-            stats.append(f"[dim]Data source: API ({Config.API_ENDPOINT})[/dim]")
+            stats.append(f"[dim]Data source: API ({configmanager.API_ENDPOINT})[/dim]")
 
-        stats.append(f"[dim]Scan interval: {Config.SCAN_INTERVAL}s[/dim]")
+        stats.append(f"[dim]Scan interval: {configmanager.SCAN_INTERVAL}s[/dim]")
 
         return "\n".join(stats)
 
@@ -440,16 +449,14 @@ class DeviceMonitorTUI:
 
             if device.authenticated:
                 # Block device
-                if self.data_source.block_device(mac):
+                if self.API.block_device(mac):
                     device.authenticated = False
                     self.console.print(f"[yellow]Blocked device: {mac}[/yellow]")
             else:
                 # Authenticate device
-                if self.data_source.authenticate_device(mac):
+                if self.API.authenticate_device(mac):
                     device.authenticated = True
                     self.console.print(f"[green]Authenticated device: {mac}[/green]")
-
-# ==================== Interactive CLI ====================
 
 
 def interactive_cli():
@@ -461,20 +468,20 @@ def interactive_cli():
     console.print("[dim]Real-time network device monitoring[/dim]\n")
 
     # Initialize data source
-    if Config.USE_API and HAS_REQUESTS:
-        data_source = APIDataSource(Config.API_ENDPOINT)
-        console.print("[green]Using API data source[/green]")
-    else:
-        data_source = FileDataSource(Config.AUTH_FILE)
-        console.print("[yellow]Using file data source[/yellow]")
-        if Config.USE_API and not HAS_REQUESTS:
-            console.print("[red]Warning: requests module not installed[/red]")
+    API = FileApi(configmanager.AUTH_FILE)
+    console.print(
+        f"[yellow]Using [FileApi{
+            '|API' if configmanager.USE_API and HAS_REQUESTS else ''
+        }] data source[/yellow]"
+    )
+    if configmanager.USE_API and not HAS_REQUESTS:
+        console.print("[red]Warning: requests module not installed[/red]")
 
     # Initialize scanner
-    scanner = NetworkScanner(Config.INTERFACE, Config.SUBNET)
+    scanner = NetworkScanner()
 
     # Start TUI
-    monitor = DeviceMonitorTUI(data_source, scanner)
+    monitor = DeviceMonitorTUI(API, scanner)
 
     try:
         console.clear()
@@ -483,8 +490,6 @@ def interactive_cli():
         console.print("\n[yellow]Exiting...[/yellow]")
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
-
-# ==================== Main Entry Point ====================
 
 
 if __name__ == "__main__":

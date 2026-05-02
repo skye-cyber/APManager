@@ -4,28 +4,26 @@ import re
 import logging
 import time
 from datetime import datetime
-import os
-from pathlib import Path
 from ..core.config import configmanager
-
-
-BASE_DIR = Path(__file__).parent.parent.resolve()
+from .authmanager import authenticator
 
 
 class DeviceScanner:
-    def __init__(self, subnet="192.168.12.0/24", interface="ap0"):
-        self.subnet = subnet
-        self.interface = interface
-        self.auth_file = BASE_DIR / "auth/authenticated_macs"
+    def __init__(self):
+        self.config = configmanager
+        self.auth_file = configmanager.mac_file
+        self.subnet = self.config.SUBNET
+        self.subnet_parts = self.subnet.split(".")
+        self.interface = self.config.CLIENT_INTERFACE
         self.setup_logging()
 
     def setup_logging(self):
-        # os.makedirs((BASE_DIR / "logs/captive").as_posix(), exist_ok=True)
+        (configmanager.BASE_DIR / "logs/captive").mkdir(parents=True, exist_ok=True)
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(message)s",
             handlers=[
-                logging.FileHandler(BASE_DIR / "logs/device_scanner.log"),
+                logging.FileHandler(configmanager.BASE_DIR / "logs/device_scanner.log"),
                 logging.StreamHandler(),
             ],
         )
@@ -45,9 +43,14 @@ class DeviceScanner:
             )
 
             for line in result.stdout.split("\n"):
-                if self.interface in line and "192.168.12." in line:
-                    # Parse: ? (192.168.12.100) at ab:cd:ef:12:34:56 [ether] on wlan0
-                    ip_match = re.search(r"\((192\.168\.12\.\d+)\)", line)
+                if self.interface in line and self.subnet.rsplit(".", 1)[0] in line:
+                    # Parse: ? eg (192.168.12.100) at ab:cd:ef:12:34:56 [ether] on wlan0
+                    ip_match = re.search(
+                        rf"\(({self.subnet_parts[0]}\.{self.subnet_parts[1]}\.{
+                            self.subnet_parts[2]
+                        }\.\d+)\)",
+                        line,
+                    )
                     mac_match = re.search(r"at\s+([0-9a-fA-F:]{17})", line)
 
                     if ip_match and mac_match:
@@ -68,7 +71,7 @@ class DeviceScanner:
             )
 
             for line in result.stdout.split("\n"):
-                if "192.168.12." in line and "REACHABLE" in line:
+                if self.subnet.rsplit(".", 1)[0] in line and "REACHABLE" in line:
                     parts = line.split()
                     if len(parts) >= 5:
                         devices.append(
@@ -84,20 +87,6 @@ class DeviceScanner:
 
         return devices
 
-    def is_authenticated(self, mac_address):
-        """Check if MAC address is authenticated"""
-        try:
-            if os.path.exists(self.auth_file):
-                with open(self.auth_file, "r") as f:
-                    authenticated_macs = [
-                        line.strip().lower() for line in f if line.strip()
-                    ]
-                return mac_address.lower() in authenticated_macs
-        except Exception as e:
-            self.logger.error(f"Error reading auth file: {e}")
-
-        return False
-
     def scan_and_log(self):
         """Main scanning function"""
         self.logger.info("Starting device scan")
@@ -106,7 +95,7 @@ class DeviceScanner:
         new_devices = []
 
         for device in devices:
-            if not self.is_authenticated(device["mac"]):
+            if not authenticator.is_authenticated(device["mac"]):
                 new_devices.append(device)
                 self.logger.info(
                     f"New unauthenticated device: {device['ip']} - {device['mac']}"
@@ -117,7 +106,9 @@ class DeviceScanner:
                 )
 
         self.logger.info(
-            f"Scan completed. Found {len(devices)} total devices, {len(new_devices)} new unauthenticated devices"
+            f"Scan completed. Found {len(devices)} total devices, {
+                len(new_devices)
+            } new unauthenticated devices"
         )
         return new_devices
 

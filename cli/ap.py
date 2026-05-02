@@ -3,9 +3,8 @@ from typing import Optional
 from rich.console import Console
 
 from core.ap_manager import ApManager
-from ap_utils.config import ConfigManager
+from ap_utils.config import ConfigManager, config_manager
 from captive_portal.core.captive_entry import Captive
-from captive_portal.core.config import ConfigManager
 
 console = Console()
 
@@ -23,7 +22,7 @@ class APManagerCLI:
         if config_file and Path(config_file).exists():
             self.config_manager = ConfigManager(config_file)
         else:
-            self.config_manager = ConfigManager()
+            self.config_manager = config_manager
 
         # Initialize captive portal with config
         self.captive = Captive(ConfigManager(config_file=config_file))
@@ -42,16 +41,20 @@ class APManagerCLI:
             self.config_manager.save_config()
 
             # Update hostapd config if relevant keys
-            hostapd_keys = {'ssid', 'password', 'channel', 'wpa_version', 'hidden'}
+            hostapd_keys = {"ssid", "password", "channel", "wpa_version", "hidden"}
             if any(k in hostapd_keys for k in updates):
-                hostman = ConfigManager(self.config_manager.__bconfdir__ / 'hostapd.json')
+                hostman = ConfigManager(
+                    self.config_manager.__bconfdir__ / "hostapd.json"
+                )
                 hostman._dict_update(None, updates)
                 hostman.save_config()
 
             # Update network config if relevant keys
-            network_keys = {'wifi_iface', 'internet_iface', 'gateway', 'share_method'}
+            network_keys = {"wifi_iface", "internet_iface", "gateway", "share_method"}
             if any(k in network_keys for k in updates):
-                netman = ConfigManager(self.config_manager.__bconfdir__ / 'netconf.json')
+                netman = ConfigManager(
+                    self.config_manager.__bconfdir__ / "netconf.json"
+                )
                 netman._dict_update(None, updates)
                 netman.save_config()
 

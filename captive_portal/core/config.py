@@ -18,6 +18,9 @@ class ConfigManager:
     dnsmasq_leasefile = "/var/lib/misc/dnsmasq.leases"
     dnsmasq_logfile = "/etc/ap_manager/dnsmasq.log"
     dnsmasq_config = "/etc/dnsmasq.d/ap_manager_portal.conf"
+    SCAN_INTERVAL = 10  # seconds
+    USE_API = False  # Set to True when API is ready
+    API_ENDPOINT = "http://localhost:8001/api/devices/"
 
     def __init__(self, config_file: Optional[str] = {}, **kwargs):
         self.config_file = config_file
@@ -63,6 +66,11 @@ class ConfigManager:
         self.dnsmasq_leasefile = Path(
             self.config.get("DNSMASQ_LEASEFILE", self.dnsmasq_leasefile)
         )
+        self.SCAN_INTERVAL = self.config.get("SCAN_INTERVAL", 10)  # seconds
+        self.USE_API = self.config.get(
+            "USE_API", False
+        )  # Set to True when API is ready
+        self.API_ENDPOINT("API_ENDPOINT", "http://localhost:8001/api/devices/")
 
     def get_config(self) -> Dict[str, Any]:
         """Get all configuration as a dictionary"""
