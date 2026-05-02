@@ -6,8 +6,8 @@ from rich.prompt import Confirm
 from shared import cli
 from utils.pretyprint import display_firewall_info
 from captive_portal.core.captive_entry import Captive
-from captive_portal.core.config import BaseConfig
-from captive_portal.core.config import baseconfig as firewallconfig
+from captive_portal.core.config import ConfigManager
+from captive_portal.core.config import configmanager as firewallconfig
 
 console = Console()
 
@@ -27,7 +27,7 @@ def firewall_start(ctx, config_file):
 
     with console.status("[bold yellow]Starting firewall..."):
         try:
-            config = BaseConfig(config_file=config_file)
+            config = ConfigManager(config_file=config_file)
             captive = Captive(config)
             success = captive.start()
 
@@ -51,7 +51,7 @@ def firewall_stop(ctx, force, config_file):
     if force or Confirm.ask("Stop firewall and captive portal?"):
         with console.status("[bold yellow]Stopping firewall..."):
             try:
-                config = BaseConfig(config_file=config_file)
+                config = ConfigManager(config_file=config_file)
                 captive = Captive(config)
                 success = captive.stop()
 
@@ -71,7 +71,7 @@ def firewall_status(ctx, config_file):
     config_file = config_file or ctx.obj["config"]
 
     try:
-        config = BaseConfig(config_file=config_file) if config_file else firewallconfig
+        config = ConfigManager(config_file=config_file) if config_file else firewallconfig
         captive = Captive(config)
         result = captive.status()
         display_firewall_info(result)
@@ -87,10 +87,9 @@ def firewall_reset(ctx, config_file):
     config_file = config_file or ctx.obj["config"]
 
     try:
-        config = BaseConfig(config_file=config_file) if config_file else firewallconfig
+        config = ConfigManager(config_file=config_file) if config_file else firewallconfig
         captive = Captive(config)
-        result = captive.reset()
-        display_firewall_info(result)
+        captive.reset()
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
 
@@ -105,7 +104,7 @@ def firewall_debug(ctx, config_file):
     with console.status("[bold yellow]Running debug...\n"):
         try:
             config = (
-                BaseConfig(config_file=config_file) if config_file else firewallconfig
+                ConfigManager(config_file=config_file) if config_file else firewallconfig
             )
             captive = Captive(config)
             captive.debug()

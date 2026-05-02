@@ -1,6 +1,6 @@
 from .start import startcaptive
 from .stop import stopcaptive
-from .config import BaseConfig, baseconfig
+from .config import ConfigManager, configmanager
 from .firewall import firewall
 from .setup import captivesetup
 from typing import Dict, Any, Optional, List
@@ -9,7 +9,7 @@ from ap_utils.colors import fg
 
 
 class Captive:
-    def __init__(self, config: BaseConfig = baseconfig):
+    def __init__(self, config: ConfigManager = configmanager):
         """Initialize Captive portal with optional configuration"""
         self.config = config
         self.firewall = firewall
@@ -109,11 +109,11 @@ class Captive:
         # Stop services
         self.stop()
 
-        # Clear firewall rules
-        self.firewall.clear_iptables()
+        # Clear firewall rules -> Hnadled by stop
+        # self.firewall.clear_iptables()
 
         # Reset configuration to defaults
-        self.config = BaseConfig()
+        self.config = ConfigManager()
 
         # Clean up authenticated devices
         if self.config.mac_file.exists():

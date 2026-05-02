@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 
-class BaseConfig:
+class ConfigManager:
     """Base configuration class with shared settings"""
 
     # Shared configuration
@@ -13,14 +13,14 @@ class BaseConfig:
     CAPTIVE_PORT = "8001"
     CLIENT_INTERFACE = "xap0"
     INTERNET_INTERFACE = "eth0"
+    AUTH_DIR = "/etc/ap_manager/auth/"
+    mac_file = "/etc/ap_manager/auth/authenticated_macs"
+    dnsmasq_leasefile = "/var/lib/misc/dnsmasq.leases"
+    dnsmasq_logfile = "/etc/ap_manager/dnsmasq.log"
+    dnsmasq_config = "/etc/dnsmasq.d/ap_manager_portal.conf"
 
-    def __init__(self, config_file: Optional[str] = None, **kwargs):
+    def __init__(self, config_file: Optional[str] = {}, **kwargs):
         self.config_file = config_file
-        self.AUTH_DIR = None
-        self.mac_file = None
-        self.dnsmasq_config = None
-        self.dnsmasq_logfile = None
-        self.dnsmasq_leasefile = None
 
         # Load configuration from file if provided
         self.config = (
@@ -47,21 +47,21 @@ class BaseConfig:
         self.AUTH_DIR = (
             Path(self.config.get("AUTH_DIR"))
             if self.config.get("AUTH_DIR")
-            else Path(self.BASE_DIR) / "auth"
+            else self.AUTH_DIR
         )
         self.mac_file = (
             Path(self.config.get("MAC_FILE"))
             if self.config.get("MAC_FILE")
-            else self.AUTH_DIR / "authenticated_macs"
+            else self.mac_file
         )
         self.dnsmasq_config = Path(
-            self.config.get("DNSMASQ_CONFIG", "/etc/dnsmasq.d/ap_manager_portal.conf")
+            self.config.get("DNSMASQ_CONFIG", self.dnsmasq_config)
         )
         self.dnsmasq_logfile = Path(
-            self.config.get("DNSMASQ_LOGFILE", "/etc/ap_manager/dnsmasq.log")
+            self.config.get("DNSMASQ_LOGFILE", self.dnsmasq_logfile)
         )
         self.dnsmasq_leasefile = Path(
-            self.config.get("DNSMASQ_LEASEFILE", "/var/lib/misc/dnsmasq.leases")
+            self.config.get("DNSMASQ_LEASEFILE", self.dnsmasq_leasefile)
         )
 
     def get_config(self) -> Dict[str, Any]:
@@ -87,8 +87,8 @@ class BaseConfig:
                 self.CLIENT_INTERFACE = value
             if hasattr(self, key):
                 setattr(self, key, value)
-            elif hasattr(BaseConfig, key):
-                setattr(BaseConfig, key, value)
+            elif hasattr(ConfigManager, key):
+                setattr(ConfigManager, key, value)
 
     def _dict_update_config(self, new_config: dict) -> dict:
         self.config.update(**new_config)
@@ -142,8 +142,8 @@ class BaseConfig:
         return f"{self.SUBNET.split('/')[0].rsplit('.', 1)[0]}.10,{self.SUBNET.split('/')[0].rsplit('.', 1)[0]}.100,255.255.255.0,12h"
 
     @classmethod
-    def from_dict(cls, config_dict: Dict[str, Any]) -> "BaseConfig":
-        """Create BaseConfig instance from dictionary"""
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "ConfigManager":
+        """Create ConfigManager instance from dictionary"""
         config = cls()
         config.update_config(**config_dict)
         return config
@@ -152,4 +152,4 @@ class BaseConfig:
 # Path(__file__).resolve().parent.parent / 'config/captive.json'
 
 conf_file = Path("/etc/ap_manager/conf/captive.json")
-baseconfig = BaseConfig(conf_file)
+configmanager = ConfigManager(conf_file)

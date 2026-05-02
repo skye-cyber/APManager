@@ -4,7 +4,7 @@
 Test script to verify the captive portal integration
 """
 
-from core.config import BaseConfig
+from core.config import ConfigManager
 from core.captive_entry import Captive
 import sys
 import os
@@ -16,11 +16,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'core'))
 
 
 def test_config_integration():
-    """Test BaseConfig integration"""
-    print("Testing BaseConfig integration...")
+    """Test ConfigManager integration"""
+    print("Testing ConfigManager integration...")
 
     # Test default config
-    config = BaseConfig()
+    config = ConfigManager()
     print(f"Default GATEWAY_ADDRESS: {config.GATEWAY_ADDRESS}")
     print(f"Default CLIENT_INTERFACE: {config.CLIENT_INTERFACE}")
 
@@ -42,7 +42,7 @@ def test_config_integration():
 
     try:
         # Test loading from JSON
-        config2 = BaseConfig(config_file=temp_json_file)
+        config2 = ConfigManager(config_file=temp_json_file)
         print(f"JSON config GATEWAY_ADDRESS: {config2.GATEWAY_ADDRESS}")
         print(f"JSON config CLIENT_INTERFACE: {config2.CLIENT_INTERFACE}")
         print(f"JSON config CAPTIVE_PORT: {config2.CAPTIVE_PORT}")
@@ -57,7 +57,7 @@ def test_config_integration():
         if os.path.exists(temp_output_file):
             os.unlink(temp_output_file)
 
-    print("✓ BaseConfig integration test passed")
+    print("✓ ConfigManager integration test passed")
 
 
 def test_captive_integration():
@@ -69,7 +69,7 @@ def test_captive_integration():
     print(f"Captive config GATEWAY_ADDRESS: {captive.config.GATEWAY_ADDRESS}")
 
     # Test captive with custom config
-    custom_config = BaseConfig(CLIENT_INTERFACE="wlan0", CAPTIVE_PORT="9090")
+    custom_config = ConfigManager(CLIENT_INTERFACE="wlan0", CAPTIVE_PORT="9090")
     captive2 = Captive(config=custom_config)
     print(f"Custom captive CLIENT_INTERFACE: {captive2.config.CLIENT_INTERFACE}")
     print(f"Custom captive CAPTIVE_PORT: {captive2.config.CAPTIVE_PORT}")

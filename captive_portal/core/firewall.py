@@ -2,14 +2,14 @@ import subprocess
 import re
 from typing import List, Callable, Optional
 from ap_utils.colors import fg
-from .config import BaseConfig, baseconfig
+from .config import ConfigManager, configmanager
 from .error import ErrorHandler
 
 error_handler = ErrorHandler("CaptiveStart")
 
 
 class Firewall:
-    def __init__(self, config: BaseConfig = baseconfig):
+    def __init__(self, config: ConfigManager = configmanager):
         self.config = config
         self.client_interface = self.config.CLIENT_INTERFACE
         self.internet_interface = self.config.INTERNET_INTERFACE

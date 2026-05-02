@@ -1,6 +1,6 @@
 import subprocess
 from typing import Optional
-from .config import BaseConfig, baseconfig
+from .config import ConfigManager, configmanager
 from .error import ErrorHandler
 
 
@@ -8,7 +8,7 @@ error_handler = ErrorHandler("CaptiveSetup")
 
 
 class CaptiveSetup:
-    def __init__(self, config: Optional[BaseConfig] = baseconfig):
+    def __init__(self, config: Optional[ConfigManager] = configmanager):
         self.config = config
 
         # Initialize attributes from config

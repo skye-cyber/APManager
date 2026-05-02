@@ -5,7 +5,7 @@ from rich.console import Console
 from core.ap_manager import ApManager
 from ap_utils.config import ConfigManager
 from captive_portal.core.captive_entry import Captive
-from captive_portal.core.config import BaseConfig
+from captive_portal.core.config import ConfigManager
 
 console = Console()
 
@@ -26,7 +26,7 @@ class APManagerCLI:
             self.config_manager = ConfigManager()
 
         # Initialize captive portal with config
-        self.captive = Captive(BaseConfig(config_file=config_file))
+        self.captive = Captive(ConfigManager(config_file=config_file))
 
     def update_config(self, **kwargs):
         """Update configuration with provided values"""
