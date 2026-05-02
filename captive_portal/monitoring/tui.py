@@ -217,14 +217,14 @@ class DeviceMonitorTUI:
 
         # Footer
         footer_text = Text()
-        footer_text.append(" [Q]uit ", style="bold white on red")
-        footer_text.append(" [A]uthenticate ", style="bold white on green")
+        footer_text.append(" [Q]uit ", style="black on red")
+        footer_text.append(" [A]uthenticate ", style="black on green")
         footer_text.append(" [B]lock ", style="bold white on #a16b00")
         footer_text.append(" [R]efresh ", style="bold white on blue")
+        footer_text.append(" [↑↓/jk]Navigate ", style="bold white on #3d1e5b")
         footer_text.append(
-            f" Last scan: {self.last_scan.strftime('%H:%M:%S')} ", style="dim white"
+            f"  Last scan: {self.last_scan.strftime('%H:%M:%S')} ", style="dim white"
         )
-
         layout["footer"].update(
             Panel(Align.center(footer_text), border_style="dim white")
         )
@@ -468,7 +468,7 @@ def interactive_cli():
     console.print("[dim]Real-time network device monitoring[/dim]\n")
 
     # Initialize data source
-    API = FileApi(configmanager.AUTH_FILE)
+    API = FileApi()
     console.print(
         f"[yellow]Using [FileApi{
             '|API' if configmanager.USE_API and HAS_REQUESTS else ''

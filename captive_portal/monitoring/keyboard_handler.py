@@ -20,7 +20,7 @@ class SimpleKeyboardHandler:
 
         self.thread = threading.Thread(target=self._listen, daemon=True)
         self.thread.start()
-        print("✓ Keyboard: ↑↓/jk=nav, a/auth, b/block, q/quit")
+        # print("✓ Keyboard: ↑↓/jk=nav, a/auth, b/block, q/quit")
 
     def _listen(self):
         """Listen for keyboard input"""
@@ -44,25 +44,25 @@ class SimpleKeyboardHandler:
         """Handle single character input"""
         char = char.lower()
 
-        if char == 'q':
+        if char == "q":
             self.monitor.running = False
-        elif char == 'a':
+        elif char == "a":
             self._authenticate_selected()
-        elif char == 'b':
+        elif char == "b":
             self._block_selected()
-        elif char == 'r':
+        elif char == "r":
             self.monitor._perform_scan()
-        elif char == 'j':
+        elif char == "j":
             self._move_selection(1)
-        elif char == 'k':
+        elif char == "k":
             self._move_selection(-1)
-        elif char == '\x1b':  # Escape sequence (arrows)
+        elif char == "\x1b":  # Escape sequence (arrows)
             # Read more chars for arrow keys
             if select.select([sys.stdin], [], [], 0.01)[0]:
                 next_chars = sys.stdin.read(2)
-                if next_chars == '[A':  # Up arrow
+                if next_chars == "[A":  # Up arrow
                     self._move_selection(-1)
-                elif next_chars == '[B':  # Down arrow
+                elif next_chars == "[B":  # Down arrow
                     self._move_selection(1)
 
     def _move_selection(self, direction):

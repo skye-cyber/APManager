@@ -14,7 +14,7 @@ class ConfigManager:
     CLIENT_INTERFACE = "xap0"
     INTERNET_INTERFACE = "eth0"
     AUTH_DIR = "/etc/ap_manager/auth/"
-    mac_file = "/etc/ap_manager/auth/authenticated_macs"
+    mac_file = "/etc/ap_manager/auth/portal.json"
     dnsmasq_leasefile = "/var/lib/misc/dnsmasq.leases"
     dnsmasq_logfile = "/etc/ap_manager/dnsmasq.log"
     dnsmasq_config = "/etc/dnsmasq.d/ap_manager_portal.conf"
@@ -66,11 +66,16 @@ class ConfigManager:
         self.dnsmasq_leasefile = Path(
             self.config.get("DNSMASQ_LEASEFILE", self.dnsmasq_leasefile)
         )
-        self.SCAN_INTERVAL = self.config.get("SCAN_INTERVAL", 10)  # seconds
+        self.SCAN_INTERVAL = self.config.get(
+            "SCAN_INTERVAL", self.SCAN_INTERVAL
+        )  # seconds
         self.USE_API = self.config.get(
-            "USE_API", False
+            "USE_API", self.USE_API
         )  # Set to True when API is ready
-        self.API_ENDPOINT("API_ENDPOINT", "http://localhost:8001/api/devices/")
+        self.API_ENDPOINT = self.config.get("API_ENDPOINT", self.API_ENDPOINT)
+
+        (Path(self.BASE_DIR) / "logs").mkdir(parents=True, exist_ok=True)
+        self.AUTH_FILE = self.mac_file
 
     def get_config(self) -> Dict[str, Any]:
         """Get all configuration as a dictionary"""

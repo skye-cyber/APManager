@@ -292,6 +292,9 @@ def system_info(ctx):
     info_table.add_row(
         "Hostapd", "Available" if cli_obj.manager.has_hostapd else "Not found"
     )
+    info_table.add_row(
+        "DNSMASQ", "Available" if cli_obj.manager.has_dnsmasq else "Not found"
+    )
 
     # Interface count
     interfaces = cli_obj.manager.get_all_available_ifaces()
@@ -310,9 +313,6 @@ def system_info(ctx):
     info_table.add_row("AP Interfaces", str(ap_count))
 
     console.print(info_table)
-
-
-# ==================== VALIDATION ====================
 
 
 def validate_inputs(wifi_iface, internet_iface, share_method):

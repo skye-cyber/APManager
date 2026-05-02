@@ -32,4 +32,4 @@ class Writer:
         return True
 
 
-writer = Writer((configmanager.BASE_DIR / "logs/monitoring.log").as_posix())
+writer = Writer((Path(configmanager.BASE_DIR) / "logs/monitoring.log").as_posix())

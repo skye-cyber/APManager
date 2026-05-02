@@ -25,7 +25,7 @@ class APManagerCLI:
             self.config_manager = config_manager
 
         # Initialize captive portal with config
-        self.captive = Captive(ConfigManager(config_file=config_file))
+        self.captive = Captive(self.config_manager)
 
     def update_config(self, **kwargs):
         """Update configuration with provided values"""

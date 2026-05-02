@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import sys
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class ConfigManager:
@@ -99,7 +99,7 @@ class ConfigManager:
 
     @property
     def __bdir__(self):
-        return BASE_DIR
+        return self.config.get("BASE_DIR")
 
     @property
     def __bconfdir__(self):

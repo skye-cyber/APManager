@@ -18,12 +18,16 @@ class DeviceScanner:
         self.setup_logging()
 
     def setup_logging(self):
-        (configmanager.BASE_DIR / "logs/captive").mkdir(parents=True, exist_ok=True)
+        (configmanager.get_config().BASE_DIR / "logs/captive").mkdir(
+            parents=True, exist_ok=True
+        )
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(message)s",
             handlers=[
-                logging.FileHandler(configmanager.BASE_DIR / "logs/device_scanner.log"),
+                logging.FileHandler(
+                    configmanager.get_config().BASE_DIR / "logs/device_scanner.log"
+                ),
                 logging.StreamHandler(),
             ],
         )

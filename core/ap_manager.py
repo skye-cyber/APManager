@@ -121,7 +121,9 @@ class ApManager:
 
     def start_ap(self):
         print(
-            f"{fg.YELLOW}hostapd{fg.RESET} command-line interface: {fg.LYELLOW}hostapd_cli -p {self.conf_dir}/hostapd_ctrl{fg.RESET}"
+            f"{fg.YELLOW}hostapd{fg.RESET} command-line interface: {
+                fg.LYELLOW
+            }hostapd_cli -p {self.conf_dir}/hostapd_ctrl{fg.RESET}"
         )
         if self.config["no_haveged"]:
             self.haveged_watchdog()
@@ -201,30 +203,24 @@ class ApManager:
                     continue
 
                 ifname = line.split(":")[1].strip()
-                ifype_map = {
-                    "eth" in ifname: "ethernet",
-                    "wlan" in ifname: "wireless",
-                    "br" in ifname: "bridge",
-                    "ap" in ifname: "access point",
-                }
-                itype = (
-                    "ethernet"
-                    if "eth" in ifname
-                    else "wireless"
-                    if "wlan" in ifname
-                    else "bridge"
-                    if "br" in ifname
-                    else "access point"
-                    if "ap" in ifname
-                    else "-"
-                )
+
+                def get_interface_type(iname):
+                    if any((part in iname for part in ["eth", "enp"])):
+                        return "ethernet"
+                    elif any((part in iname for part in ["wlan", "wl"])):
+                        return "wireless"
+                    elif "br" in iname:
+                        return "bridge"
+                    elif "ap" in iname:
+                        return "access point"
+                    return "-"
 
                 iface_mac = self.get_macaddr(ifname)
                 wifi_ifaces.append(
                     {
                         "name": ifname,
                         "state": state,
-                        "type": itype,
+                        "type": get_interface_type(ifname),
                         "mac": iface_mac or None,
                     }
                 )
@@ -570,14 +566,23 @@ class ApManager:
     def dalloc_iface(self, iface=None):
         return self.interface_manager.dealloc_iface(iface)
 
-    @property
-    def has_hostapd(self):
+    def has_program(self, program):
+        if not program:
+            return False
         return (
             subprocess.run(
-                ["which", "hostapd"], check=True, capture_output=True
+                ["which", program], check=True, capture_output=True
             ).returncode
             == 0
         )
+
+    @property
+    def has_hostapd(self):
+        return self.has_program("hostapd")
+
+    @property
+    def has_dnsmasq(self):
+        return self.has_program("dnsmasq")
 
     @property
     def where_hostapd(self):

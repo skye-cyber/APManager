@@ -62,17 +62,27 @@ class AuthManager:
         self.auth_data: Schema = self.readFile()
 
     @property
-    def schema() -> Schema:
+    def schema(self) -> Schema:
         SCHEMA: Schema = {"AUTHENTICATION": {"DEVICES": {}}, "MAC_HIST": []}
-        return Schema.from_json(SCHEMA)
+        return Schema.from_json(json.dumps(SCHEMA))
 
     def readFile(self):
         if not self.AUTH_FILE:
             return self.schema
-        with open(self.AUTH_FILE, "r") as f:
-            data = json.load(f)
 
-        return Schema.from_json(data) if data else self.schema
+        data = None
+
+        try:
+            with open(self.AUTH_FILE, "r") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+
+        if data:
+            return Schema.from_json(json.dumps(data))
+        # Initialize file
+        self.writeFile(self.schema)
+        return self.schema
 
     def writeFile(self, data: Schema) -> bool:
         with open(self.AUTH_FILE, "w") as f:
