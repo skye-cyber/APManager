@@ -176,10 +176,7 @@ class Captive:
 
     def _get_authenticated_devices(self) -> List[str]:
         """Get list of authenticated devices"""
-        if self.config.mac_file.exists():
-            with open(self.config.mac_file, "r") as f:
-                return [line.strip() for line in f.readlines() if line.strip()]
-        return []
+        return authenticator.authenticated
 
     def _get_firewall_status(self) -> Dict[str, Any]:
         """Get firewall status information"""

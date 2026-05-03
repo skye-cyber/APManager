@@ -32,6 +32,16 @@ class StartCaptive:
 
     def configure_dnsmasq(self) -> bool:
         """Configure dnsmasq service"""
+        captive_domains = [
+            "captive.apple.com",
+            "connectivitycheck.gstatic.com",
+            "clients3.google.com",
+            "www.msftconnecttest.com",
+            "detectportal.firefox.com",
+            "network-test.debian.org",
+            "nmcheck.gnome.org",
+            "kitkat.googleapis.com",
+        ]
         config = [
             # Listening interface
             f"interface={self.interface}",
@@ -41,7 +51,12 @@ class StartCaptive:
             # Gateway
             f"dhcp-option=3,{self.gateway_address}",
             # CRITICAL: Hijack ALL DNS queries to return gateway IP
-            f"address=/#/{self.gateway_address}",
+            # f"address=/#/{self.gateway_address}",
+            # Only hijack captive detection domains
+            *[
+                f"address=/{domain}/{self.gateway_address}"
+                for domain in captive_domains
+            ],
             # DNS options
             "dhcp-option=tag:authenticated,6,8.8.8.8,1.1.1.1",
             f"dhcp-option=tag:!authenticated,6,{self.gateway_address}",

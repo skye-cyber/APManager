@@ -42,7 +42,7 @@ class CaptiveSetup:
         """
         try:
             print("=" * 60)
-            print("Setting up Captive Portal (matching bash script)")
+            print("Setting up Captive Portal")
             print("=" * 60)
 
             self.enable_ip_forwarding()

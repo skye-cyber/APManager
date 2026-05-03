@@ -272,13 +272,14 @@ class Firewall:
         self._remove_mac_rules(mac)
 
         # 2. Check if ACCEPT rule already exists in CAPTIVE_PORTAL
+        # FIX-CAPTIVE: Use -I 1 instead of -A to insert BEFORE the DROP rule
         if not self._mac_rule_exists("CAPTIVE_PORTAL", mac, "ACCEPT"):
             # Add ACCEPT rule at position after any existing authenticated rules
             print("  Adding ACCEPT rule to CAPTIVE_PORTAL chain")
             subprocess.run(
                 [
                     "iptables",
-                    "-A",  # Changed from -I to -A unless you need position 1 specifically
+                    "-I",  # Changed from -I to -A unless you need position 1 specifically
                     "CAPTIVE_PORTAL",
                     "-m",
                     "mac",
@@ -300,7 +301,7 @@ class Firewall:
                     "iptables",
                     "-t",
                     "nat",
-                    "-A",  # Changed from -I unless position matters
+                    "-I",  # Changed from -I unless position matters
                     "AUTH_REDIRECT",
                     "-m",
                     "mac",
