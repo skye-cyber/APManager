@@ -6,6 +6,7 @@ from .setup import captivesetup
 from typing import Dict, Any, Optional, List
 import subprocess
 from ap_utils.colors import fg
+from ..utils.authmanager import authenticator
 
 
 class Captive:
@@ -112,12 +113,8 @@ class Captive:
         # Clear firewall rules -> Hnadled by stop
         # self.firewall.clear_iptables()
 
-        # Reset configuration to defaults
-        self.config = ConfigManager()
-
         # Clean up authenticated devices
-        if self.config.mac_file.exists():
-            self.config.mac_file.write_text("")
+        authenticator.writeFile(authenticator.schema)
 
         print("Captive portal reset complete")
         return True
