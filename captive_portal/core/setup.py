@@ -650,7 +650,9 @@ class CaptiveSetup:
                 all_passed = False
 
         print(
-            f"\nResult: {'✅ All checks passed' if all_passed else '❌ Some checks failed'}"
+            f"\nResult: {
+                '✅ All checks passed' if all_passed else '❌ Some checks failed'
+            }"
         )
         return all_passed
 

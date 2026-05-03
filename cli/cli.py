@@ -20,9 +20,10 @@ def entry():
         import initializer
         import auth
         import hotspot
-        import firewall
+        import captive
         import monitor
         from shared import cli
+
         cli()
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled[/yellow]")
@@ -31,11 +32,12 @@ def entry():
         console.print(f"[red]Error: {e}[/red]")
         # if ctx.obj.get('verbose', False):
         import traceback
+
         console.print(traceback.format_exc())
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Check for root privileges
     if os.geteuid() != 0:
         console.print("[bold red]This script must be run as root[/bold red]")

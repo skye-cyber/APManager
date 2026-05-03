@@ -4,6 +4,7 @@ from pathlib import Path
 from .setup import captivesetup
 from .firewall import firewall
 from .config import configmanager, ConfigManager
+from .VPN import vpnAuthentictaor
 
 
 class StartCaptive:
@@ -18,7 +19,7 @@ class StartCaptive:
         self.dhcp_range = self.config.get_dhcp_range()
         self.dnsmasq_leasefile = self.config.dnsmasq_leasefile
 
-    def start(self) -> bool:
+    def start(self, novpn: bool = False) -> bool:
         """Start the captive portal service"""
         print("Starting captive portal...")
         self.stop_services()
@@ -26,6 +27,9 @@ class StartCaptive:
         self.configure_dnsmasq()
         captivesetup.setup()
         firewall.update([])
+        # Vpn rules
+        if not novpn:
+            vpnAuthentictaor.vpn_bypass()
         self.start_services()
         self.test_config()
         return True
@@ -83,7 +87,12 @@ class StartCaptive:
     def stop_services(self) -> bool:
         """Stop dnsmasq and Apache services"""
         subprocess.run(["service", "dnsmasq", "stop"], check=True)
-        subprocess.run(["sudo", "systemctl", "stop", "apache2"], check=True)
+        subprocess.run(
+            ["sudo", "systemctl", "stop", "apache2"],
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            check=True,
+        )
         subprocess.run(["sudo", "killall", "dnsmasq"], check=False)
         return True
 

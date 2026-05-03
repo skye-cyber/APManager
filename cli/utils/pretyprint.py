@@ -4,9 +4,9 @@ from rich.pretty import pprint as rich_pprint
 console = Console()
 
 
-def display_firewall_info(data):
+def display_captive_info(data):
     if not data:
         return
 
-    console.rule("[bold cyan]AP Manager Firewall Info")
+    console.rule("[bold cyan]AP Manager Captive Info")
     rich_pprint(data, expand_all=True)

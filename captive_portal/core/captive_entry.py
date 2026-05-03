@@ -16,13 +16,13 @@ class Captive:
         self.firewall = firewall
         self.setup = captivesetup
 
-    def start(self):
+    def start(self, novpn: bool = False):
         """Start the captive portal service"""
-        return startcaptive.start()
+        return startcaptive.start(novpn=novpn)
 
-    def stop(self):
+    def stop(self, novpn: bool = False):
         """Stop the captive portal service"""
-        return stopcaptive.stop()
+        return stopcaptive.stop(novpn=novpn)
 
     def status(self) -> Dict[str, Any]:
         """Get current status of captive portal"""
@@ -103,12 +103,12 @@ class Captive:
 
         return True
 
-    def reset(self) -> bool:
+    def reset(self, novpn: bool = False) -> bool:
         """Reset captive portal to default state"""
         print("Resetting captive portal...")
 
         # Stop services
-        self.stop()
+        self.stop(novpn=novpn)
 
         # Clear firewall rules -> Hnadled by stop
         # self.firewall.clear_iptables()

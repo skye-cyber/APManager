@@ -1,10 +1,11 @@
 import subprocess
+from .VPN import vpnAuthentictaor
 
 
 class StopCaptive:
     def __init__(self): ...
 
-    def stop(self) -> bool:
+    def stop(self, novpn: bool = False) -> bool:
         """
         Stop captive portal
         """
@@ -12,6 +13,8 @@ class StopCaptive:
 
         self.stop_services()
         self.clear_iptables()
+        if not novpn:
+            vpnAuthentictaor.vpn_bypass(unset=True)
         print("Captive portal stopped")
         return True
 
