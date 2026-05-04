@@ -9,7 +9,7 @@ from ap_utils.colors import fg
 from ..utils.authmanager import authenticator
 
 
-class Captive:
+class CaptiveManager:
     def __init__(self, config: ConfigManager = configmanager):
         """Initialize Captive portal with optional configuration"""
         self.config = config
@@ -196,3 +196,6 @@ class Captive:
             "status": self.status(),
             "authenticated_devices": self._get_authenticated_devices(),
         }
+
+
+captivemanager = CaptiveManager()

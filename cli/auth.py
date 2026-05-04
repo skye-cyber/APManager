@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 from typing import Optional
 import asyncio
-from captive_portal.core.firewall import firewall
+from captive.core.firewall import firewall
 from commsys import APManagerCommunicator
 from shared import cli
 
@@ -69,7 +69,7 @@ def authenticate(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
 
     else:
         # Local firewall only
-        from captive_portal.core.firewall import firewall
+        from captive.core.firewall import firewall
 
         try:
             firewall.authenticate(mac)
@@ -143,7 +143,7 @@ def block(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
 
     else:
         # Local firewall only
-        from captive_portal.core.firewall import firewall
+        from captive.core.firewall import firewall
 
         try:
             firewall.deauthenticate(mac)

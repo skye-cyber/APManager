@@ -2,7 +2,7 @@ import click
 from rich.console import Console
 from shared import cli
 
-from captive_portal.monitoring.tui import interactive_cli
+from captive.monitoring.tui import interactive_cli
 
 console = Console()
 

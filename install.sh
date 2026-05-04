@@ -32,7 +32,7 @@ mkdir -p "$INSTALL_DIR/logs"
 # Copy files
 cp -r commsys "$INSTALL_DIR/"
 cp -r cli "$INSTALL_DIR/"
-cp -r captive_portal "$INSTALL_DIR/"
+cp -r captive "$INSTALL_DIR/"
 cp -r ap_utils "$INSTALL_DIR/"
 cp -r core "$INSTALL_DIR/"
 cp *.sh "$INSTALL_DIR/"

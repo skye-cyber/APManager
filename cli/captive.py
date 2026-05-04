@@ -5,10 +5,10 @@ from rich.prompt import Confirm
 
 from shared import cli
 from utils.pretyprint import display_captive_info
-from captive_portal.core.captive_entry import Captive
-from captive_portal.core.config import ConfigManager
-from captive_portal.core.config import configmanager as captiveconfig
-from captive_portal.core.VPN import vpnAuthentictaor
+from captive.core.captive_entry import Captive
+from captive.core.config import ConfigManager
+from captive.core.config import configmanager as captiveconfig
+from captive.core.VPN import vpnAuthentictaor
 
 console = Console()
 
