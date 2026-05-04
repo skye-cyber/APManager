@@ -2,7 +2,7 @@ import click
 from rich.console import Console
 from shared import cli
 
-from captive.monitoring.tui import interactive_cli
+from Captive.monitoring.tui import interactive_cli
 
 console = Console()
 
@@ -13,9 +13,7 @@ def monitor():
     pass
 
 
-@monitor.command('devices')
+@monitor.command("devices")
 @click.pass_context
 def device(ctx):
     return interactive_cli()
-
-

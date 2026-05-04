@@ -5,10 +5,10 @@ from rich.prompt import Confirm
 
 from shared import cli
 from utils.pretyprint import display_captive_info
-from captive.core.captive_entry import Captive
-from captive.core.config import ConfigManager
-from captive.core.config import configmanager as captiveconfig
-from captive.core.VPN import vpnAuthentictaor
+from Captive.core.manager import CaptiveManager
+from Captive.core.config import ConfigManager
+from Captive.core.config import configmanager as captiveconfig
+from Captive.core.VPN import vpnAuthenticator
 
 console = Console()
 
@@ -20,18 +20,18 @@ def captive():
 
 
 @captive.command("enable")
-@click.option("--no-vpn", is_flag=True, help="Do not enable vpn interfaces")
+@click.option("--vpn", is_flag=True, help="Do not enable vpn interfaces")
 @click.option("--config-file", type=click.Path(exists=True), help="Custom config file")
 @click.pass_context
-def captive_enable(ctx, no_vpn, config_file):
+def captive_enable(ctx, vpn, config_file):
     """Start captive and captive portal"""
     config_file = config_file or ctx.obj["config"] or "/etc/ap_manager/conf/config.json"
 
     with console.status("[bold yellow]Starting captive...\n"):
         try:
             config = ConfigManager(config_file=config_file)
-            captive = Captive(config)
-            success = captive.start(novpn=no_vpn)
+            captive = CaptiveManager(config)
+            success = captive.start(vpn=vpn)
 
             if success:
                 console.print("[green]✓ Captive and captive portal started[/green]")
@@ -55,7 +55,7 @@ def captive_disable(ctx, force, no_vpn, config_file):
         with console.status("[bold yellow]Stopping captive..."):
             try:
                 config = ConfigManager(config_file=config_file)
-                captive = Captive(config)
+                captive = CaptiveManager(config)
                 success = captive.stop(novpn=no_vpn)
 
                 if success:
@@ -77,7 +77,7 @@ def captive_status(ctx, config_file):
         config = (
             ConfigManager(config_file=config_file) if config_file else captiveconfig
         )
-        captive = Captive(config)
+        captive = CaptiveManager(config)
         result = captive.status()
         display_captive_info(result)
     except Exception as e:
@@ -96,7 +96,7 @@ def captive_reset(ctx, no_vpn, config_file):
         config = (
             ConfigManager(config_file=config_file) if config_file else captiveconfig
         )
-        captive = Captive(config)
+        captive = CaptiveManager(config)
         captive.reset(novpn=no_vpn)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
@@ -114,7 +114,7 @@ def captive_reset(ctx, no_vpn, config_file):
 def captive_vpn_enable(ctx, interface):
     """Enable/Allow traffic to/from vpn interface"""
     try:
-        return vpnAuthentictaor.allowVPNInterface(iface=interface)
+        return vpnAuthenticator.allowVPNInterface(iface=interface)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
 
@@ -131,7 +131,7 @@ def captive_vpn_enable(ctx, interface):
 def captive_vpn_disable(ctx, interface):
     """Disable/Disallow traffic to/from vpn interface"""
     try:
-        return vpnAuthentictaor.blockVPNInterface(iface=interface)
+        return vpnAuthenticator.blockVPNInterface(iface=interface)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
 
@@ -148,7 +148,7 @@ def captive_vpn_disable(ctx, interface):
 def captive_vpn_reset(ctx, interface):
     """No explit rules for traffic to/from vpn interface"""
     try:
-        return vpnAuthentictaor.resetVPNInterface(iface=interface)
+        return vpnAuthenticator.resetVPNInterface(iface=interface)
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
 
@@ -165,7 +165,7 @@ def captive_debug(ctx, config_file):
             config = (
                 ConfigManager(config_file=config_file) if config_file else captiveconfig
             )
-            captive = Captive(config)
+            captive = CaptiveManager(config)
             captive.debug()
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")

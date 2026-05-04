@@ -4,7 +4,7 @@ from pathlib import Path
 from .setup import captivesetup
 from .firewall import firewall
 from .config import configmanager, ConfigManager
-from .VPN import vpnAuthentictaor
+from .VPN import vpnAuthenticator
 
 
 class StartCaptive:
@@ -19,7 +19,7 @@ class StartCaptive:
         self.dhcp_range = self.config.get_dhcp_range()
         self.dnsmasq_leasefile = self.config.dnsmasq_leasefile
 
-    def start(self, novpn: bool = False) -> bool:
+    def start(self, vpn: bool = False) -> bool:
         """Start the captive portal service"""
         print("Starting captive portal...")
         self.stop_services()
@@ -28,8 +28,8 @@ class StartCaptive:
         captivesetup.setup()
         firewall.update([])
         # Vpn rules
-        if not novpn:
-            vpnAuthentictaor.vpn_bypass()
+        if vpn:
+            vpnAuthenticator.vpn_bypass()
         self.start_services()
         self.test_config()
         return True
@@ -65,9 +65,9 @@ class StartCaptive:
             "dhcp-option=tag:authenticated,6,8.8.8.8,1.1.1.1",
             f"dhcp-option=tag:!authenticated,6,{self.gateway_address}",
             # DNS forwarders
-            # "server=8.8.8.8",
-            # "server=1.1.1.1",
-            # "server=8.8.4.4",
+            "server=8.8.8.8",
+            "server=1.1.1.1",
+            "server=8.8.4.4",
             # "dhcp-option-force=option:mtu,1500",
             # "no-hosts",
             # Logging

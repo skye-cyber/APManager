@@ -16,9 +16,9 @@ class CaptiveManager:
         self.firewall = firewall
         self.setup = captivesetup
 
-    def start(self, novpn: bool = False):
+    def start(self, vpn: bool = False):
         """Start the captive portal service"""
-        return startcaptive.start(novpn=novpn)
+        return startcaptive.start(vpn=vpn)
 
     def stop(self, novpn: bool = False):
         """Stop the captive portal service"""

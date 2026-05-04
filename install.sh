@@ -4,9 +4,9 @@
 
 set -e
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+# RED='\033[0;31m'
+# GREEN='\033[0;32m'
+# YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
@@ -28,17 +28,17 @@ mkdir -p "$BASE_DIR/proc"
 
 # Creat log directory
 mkdir -p "$INSTALL_DIR/logs"
+mkdir -p "$BASE_DIR/logs"
 
 # Copy files
 cp -r commsys "$INSTALL_DIR/"
 cp -r cli "$INSTALL_DIR/"
-cp -r captive "$INSTALL_DIR/"
+cp -r Captive "$INSTALL_DIR/"
 cp -r ap_utils "$INSTALL_DIR/"
 cp -r core "$INSTALL_DIR/"
 cp *.sh "$INSTALL_DIR/"
 cp *.py "$INSTALL_DIR/"
 cp -r config/* "$BASE_DIR/conf/"
-mv "$BASE_DIR/conf/config-bc.json" "$BASE_DIR/.config-bc.json"
 
 # Set proper permissions
 chmod 755 "$BASE_DIR" -R
@@ -74,7 +74,8 @@ echo "Usage examples:"
 echo "  sudo ap_manager hotspot start          # Start hotspot"
 echo "  sudo ap_manager config [show,edit]     # Modify/update/edit configuration"
 echo "  sudo ap_manager hotspot status         # Check status"
-echo "  sudo ap_manager hotspot stop --force   # Stop hotspot"
+echo "  sudo ap_manager hotspot stop           # Stop hotspot"
+echo "  sudo ap_manager hotspot reset --force --hard   # Hard reset"
 echo ""
 echo "To enable automatic startup:"
 echo -e "  systemctl enable $BLUE ap_manager.service $NC"

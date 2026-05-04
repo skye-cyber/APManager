@@ -4,7 +4,7 @@
 "CAPTIVE_PORT":"8001",
 "SCAN_INTERVAL": 1,
 "USE_API": false,
-"INTERNET_INTERFACE":"enp0s25",
+"INTERNET_INTERFACE":"wlo1",
 "BASE_DIR":"/etc/ap_manager",
 "AUTH_DIR":"/etc/ap_manager/auth",
 "MAC_FILE":"/etc/ap_manager/auth/portal.json",

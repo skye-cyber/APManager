@@ -4,7 +4,7 @@ from rich.console import Console
 
 from core.ap_manager import ApManager
 from ap_utils.config import ConfigManager, config_manager
-from captive.core.entry import CaptiveManager
+from Captive.core.manager import CaptiveManager
 
 console = Console()
 

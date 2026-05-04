@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.panel import Panel
 from typing import Optional
 import asyncio
-from captive.core.firewall import firewall
+from Captive.core.firewall import firewall
 from commsys import APManagerCommunicator
 from shared import cli
 
@@ -36,12 +36,12 @@ def auth():
 @click.option("--mac", type=str, required=True, help="Device MAC address")
 @click.option("--hook", type=str, help="Webhook URL for callback")
 @click.option("--api", is_flag=True, default=True, help="Use Django API (default)")
-@click.option("--local", is_flag=True, help="Use local firewall only")
+@click.option("--remote", is_flag=True, help="Authenticate to remote backend api")
 @click.pass_context
-def authenticate(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
+def authenticate(ctx, mac: str, hook: Optional[str], api: bool, remote: bool):
     """Authenticate device (allow internet access)"""
 
-    if api and not local:
+    if api and remote:
         # Use Django API
         comm = get_communicator()
 
@@ -69,7 +69,7 @@ def authenticate(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
 
     else:
         # Local firewall only
-        from captive.core.firewall import firewall
+        # from Captive.core.firewall import firewall
 
         try:
             firewall.authenticate(mac)
@@ -110,12 +110,12 @@ def authenticate(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
 @click.option("--mac", type=str, required=True, help="Device MAC address")
 @click.option("--hook", type=str, help="Webhook URL for callback")
 @click.option("--api", is_flag=True, default=True, help="Use Django API (default)")
-@click.option("--local", is_flag=True, help="Use local firewall only")
+@click.option("--remote", is_flag=True, help="Deauthenticate to remote backend api")
 @click.pass_context
-def block(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
+def block(ctx, mac: str, hook: Optional[str], api: bool, remote: bool):
     """Block device (remove internet access)"""
 
-    if api and not local:
+    if api and remote:
         # Use Django API
         comm = get_communicator()
 
@@ -143,7 +143,7 @@ def block(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
 
     else:
         # Local firewall only
-        from captive.core.firewall import firewall
+        # from Captive.core.firewall import firewall
 
         try:
             firewall.deauthenticate(mac)
@@ -181,11 +181,11 @@ def block(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
 @click.option("--mac", type=str, required=True, help="Device MAC address")
 @click.option("--hook", type=str, help="Webhook URL for callback")
 @click.option("--api", is_flag=True, default=True, help="Use Django API (default)")
-@click.option("--local", is_flag=True, help="Use local firewall only")
+@click.option("--remote", is_flag=True, help="Status from remote backend api")
 @click.pass_context
-def status(ctx, mac: str, hook: Optional[str], api: bool, local: bool):
+def status(ctx, mac: str, hook: Optional[str], api: bool, remote: bool):
     """Check device authentication status"""
-    if api and not local:
+    if api and remote:
         # Use Django API
         comm = get_communicator()
 

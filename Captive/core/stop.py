@@ -1,5 +1,5 @@
 import subprocess
-from .VPN import vpnAuthentictaor
+from .VPN import vpnAuthenticator
 
 
 class StopCaptive:
@@ -14,7 +14,7 @@ class StopCaptive:
         self.stop_services()
         self.clear_iptables()
         if not novpn:
-            vpnAuthentictaor.vpn_bypass(unset=True)
+            vpnAuthenticator.vpn_bypass(unset=True)
         print("Captive portal stopped")
         return True
 
