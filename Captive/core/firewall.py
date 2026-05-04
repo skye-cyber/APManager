@@ -4,6 +4,7 @@ from typing import List, Callable, Optional
 from ap_utils.colors import fg
 from .config import ConfigManager, configmanager
 from .error import ErrorHandler
+from ..utils.authmanager import authenticator
 
 error_handler = ErrorHandler("CaptiveStart")
 
@@ -550,11 +551,13 @@ class Firewall:
 
     def authenticate(self, mac: str):
         """Alias for update_firewall_allow"""
-        return self.update_firewall_allow(mac)
+        self.update_firewall_allow(mac)
+        return authenticator.addDevice(mac)
 
     def deauthenticate(self, mac: str):
         """Alias for update_firewall_block"""
-        return self.update_firewall_block(mac)
+        self.update_firewall_block(mac)
+        return authenticator.removeDevice(mac)
 
     def auth_status(self, mac: str):
         """Check if MAC is authenticated (has ACCEPT rule)"""

@@ -108,6 +108,12 @@ class AuthManager:
         return True
 
     def addDevice(self, mac: str, ip: str = None) -> bool:
+        for dev in self.auth_data.AUTHENTICATION.DEVICES:
+            if mac == dev.MAC:
+                # Check if MAC already authenticated
+                if self.is_authenticated(mac):
+                    print(f"Device {mac} already authenticated")
+                    return False
         device = Device(
             IP=ip,
             MAC=mac,
