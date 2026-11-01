@@ -387,12 +387,23 @@ sudo ap_manager info
 - Use `sudo` or run as root user
 
 **Hostapd errors**:
-- Check hostapd logs: `/var/log/syslog`
+- Check hostapd logs: `/etc/ap_manager/hostapd.log`
 - Ensure no other processes are using the WiFi interface
 
 **DNS issues**:
-- Check dnsmasq configuration: `/etc/dnsmasq.conf`
+- Check dnsmasq log: `/etc/ap_manager/dnsmasq.log`
+- Check dnsmasq configuration: `/etc/ap_manager/conf/dnsmasq.conf`
 - Ensure port 53 is not used by another service
+
+**Accesspoint not starting**
+- Hotspot failing to start?
+```bash
+# First only configure/setup
+sudo ap_manager hotspot start --no-services
+
+# Then start services
+sudo ap_manager hotspot start --no-setup
+```
 
 ### Debugging Commands
 
@@ -412,7 +423,7 @@ journalctl -u ap_manager -f
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the GPL V3 License.
 
 ## Support
 
