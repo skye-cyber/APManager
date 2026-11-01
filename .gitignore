@@ -10,7 +10,7 @@ __pycache__/
 
 # Ignore temporary files
 *~
-*.egg-info/**
+*.egg-info/
 # Ignore build directories
 **/build/
 **/dist/
