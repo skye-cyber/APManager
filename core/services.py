@@ -647,6 +647,7 @@ class NetServices:
             else:
                 if self.hostapd_rtries > 2:
                     sys.exit("Hostapd startup failure")
+                self.hostapd_rtries += 1
                 channel = shared.get_current_channel()
                 progress_fn(
                     f"[Retry] {fg.BGREEN}Channel {channel}{fg.RESET}"
