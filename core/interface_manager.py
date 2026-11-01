@@ -863,3 +863,6 @@ class InterfaceManager:
 
     def is_interface_configured(self, iface=None) -> bool:
         return shared.is_interface_configured(iface)
+
+    def get_current_channel(self, interface: str | None):
+        return shared.get_current_channel(interface)

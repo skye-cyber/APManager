@@ -52,7 +52,7 @@ class NetworkConfigurator:
                 check=True,
             )
 
-            # 2. Allow forwarding from hotspot (xap0) to internet (wlan0)
+            # 2. Allow forwarding from hotspot (xap0) to internet (wlan0, wo1 etc)
             command.run(
                 [
                     "iptables",

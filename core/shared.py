@@ -1,5 +1,7 @@
 import os
 import subprocess
+import re
+from ap_utils.config import config_manager
 
 
 class Shared:
@@ -157,6 +159,15 @@ class Shared:
         except Exception as e:
             print(f"Error obtaining hostapd pid: {str(e)}: {pid_file}")
             return False
+
+    def get_current_channel(self, interface: str | None = None):
+        interface = interface if interface else config_manager.get_config["wifi_iface"]
+        result = subprocess.run(
+            ["iw", "dev", interface, "info"], capture_output=True, text=True
+        )
+        # Match lines like "channel 1 (2412 MHz)"
+        match = re.search(r"channel\s+(\d+)", result.stdout)
+        return int(match.group(1)) if match else None
 
 
 shared = Shared()

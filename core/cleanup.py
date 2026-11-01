@@ -113,26 +113,35 @@ class CleanupManager(SignalHandler):
     def clean_nat(self):
         # Remove NAT rules
         try:
-            subprocess.run(
-                [
-                    "iptables",
-                    "-w",
-                    "-t",
-                    "nat",
-                    "-D",
-                    "POSTROUTING",
-                    "-s",
-                    f"{self.gateway.rsplit('.', 1)[0]}.0/24",
-                    "!",
-                    "-o",
-                    self.wifi_iface,
-                    "-j",
-                    "MASQUERADE",
-                ],
-                check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            # Delete all matching traffic masquarade rules (handles 0, 1, or many duplicates)
+            rule_spec = [
+                "-s",
+                f"{self.gateway.rsplit('.', 1)[0]}.0/24",
+                "!",
+                "-o",
+                self.wifi_iface,
+                "-j",
+                "MASQUERADE",
+            ]
+
+            MAX_DELETES = 64  # sanity cap; more than this means something is wrong
+            for _ in range(MAX_DELETES):
+                result = subprocess.run(
+                    ["iptables", "-w", "-t", "nat", "-D", "POSTROUTING"] + rule_spec,
+                    check=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=10,  # don't hang forever on the xtables lock
+                )
+                if result.returncode != 0:
+                    break  # no more matching rules
+            else:
+                # hit the cap without `-D` failing -> something is re-adding the rule
+                raise RuntimeError(
+                    f"iptables -D still succeeding after {MAX_DELETES} attempts; "
+                    f"last stderr: {result.stderr.decode(errors='replace')}"
+                )
+
             subprocess.run(
                 [
                     "iptables",
@@ -477,7 +486,7 @@ class CleanupManager(SignalHandler):
 
         try:
             # Disown all child processes
-            subprocess.run(["which", "disown"], shell=True)
+            # has_disnown = subprocess.run(["which", "disown"], shell=True)
 
             # Kill haveged_watchdog if running
             if self.haveged_watchdog_pid:

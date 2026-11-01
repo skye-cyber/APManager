@@ -25,7 +25,7 @@ class SignalHandler:
     def handle_signal(self, signum, frame):
         """Handle signals received by the application."""
         if signum == signal.SIGINT:
-            sys.exit(1)
+            raise KeyboardInterrupt
         if signum == signal.SIGUSR1:
             self.clean_exit()
         elif signum == signal.SIGUSR2:
@@ -39,10 +39,10 @@ class SignalHandler:
         if message:
             print(message)
 
-        '''
+        """
         Send die signal to the main process if not the main process
         Only when runing in daemon mode eg ap_manager command never existed so not applicable in current implementation
-        '''
+        """
         # if os.getpid() != os.getppid():
         #     os.kill(os.getppid(), signal.SIGUSR2)
 

@@ -59,10 +59,13 @@ class ConfigManager:
         except IOError:
             sys.exit(f"Error: Unable to read config file {self.config_file}")
 
-    def update_config(self):
+    def set(self, key, value):
         """Save configuration to file"""
-        with open(self.config_file, "w") as f:
-            json.dump(self.config, f, indent=2)
+        if key not in self.config:
+            return None
+        self.config[key] = value
+        self.save_config()
+        return value
 
     def save_config(self):
         """Save configuration to file"""
@@ -77,25 +80,26 @@ class ConfigManager:
             else None
         )
 
-    def _dict_update(self, d1: dict, d2: dict):
+    def _dict_update(self, d1: dict | None, d2: dict):
         """
         Args:
             d1: dictionary to update - target dict
             d2: dictionary to update from - source dict
         """
-        if not d1:
-            d1 = self.config
-        return (
-            d1.update(
-                {
-                    k.lower(): v
-                    for k, v in d2.items()
-                    if v and k in config_manager.config.keys()
-                }
-            )
-            if d1 and d2
-            else d1 or {}
+        target = d1 if d1 is not None else self.config
+        known = config_manager.config  # or .keys(), hoisted
+        if not d2:
+            return self.config
+
+        target.update(
+            {
+                k.lower(): v
+                for k, v in d2.items()
+                if v is not None and k.lower() in known
+            }
         )
+
+        return target
 
     @property
     def __bdir__(self):

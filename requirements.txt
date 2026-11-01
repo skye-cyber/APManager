@@ -3,3 +3,4 @@ click
 keyboard
 colorama
 aiohttp
+# daemon

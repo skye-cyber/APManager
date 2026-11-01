@@ -23,13 +23,16 @@ class NetServices:
         self.conf_dir = self.config.get("conf_dir", config_manager.__bconfdir__)
         self.subnet = self.config["ip_range"]
         self.dhcp_range = self.get_dhcp_range()
+        self.hostapd_rtries = 0
 
     def __enter__(self):
         self.config = config_manager.get_config
 
     def configure(self):
         print(
-            f"Configuring services ['{fg.BLUE}hostapd{fg.RESET}', '{fg.BLUE}dnsmasq{fg.RESET}']..."
+            f"Configuring services ['{fg.BLUE}hostapd{fg.RESET}', '{fg.BLUE}dnsmasq{
+                fg.RESET
+            }']..."
         )
         self.configure_hostapd()
         self.update_global_hostapd()
@@ -54,7 +57,9 @@ class NetServices:
         """Configure hostapd with all necessary parameters."""
         try:
             print(
-                f"Hostapd Config: {fg.YELLOW}{os.path.join(self.conf_dir, 'hostapd.conf')}{fg.RESET}"
+                f"Hostapd Config: {fg.YELLOW}{
+                    os.path.join(self.conf_dir, 'hostapd.conf')
+                }{fg.RESET}"
             )
 
             # Basic hostapd configuration
@@ -65,7 +70,8 @@ class NetServices:
                 f"ctrl_interface={os.path.join(self.conf_dir, 'hostapd_ctrl')}",
                 "ctrl_interface_group=0",
                 "max_num_sta=100",
-                f"ht_capab={self.config['ht_capab']}",  # [HT40][SHORT-GI-20][DSSS_CCK-40]",
+                # [HT40][SHORT-GI-20][DSSS_CCK-40]",
+                f"ht_capab={self.config['ht_capab']}",
                 "auth_algs=1",
                 f"ap_isolate={int(self.config.get('isolate_clients', False))}",
                 "ignore_broadcast_ssid=0",
@@ -92,7 +98,11 @@ class NetServices:
                     if channel not in supported_channels:
                         channel_new = supported_channels[0]
                         print(
-                            f"Warning: Channel {channel} is invalid for 2.4GHz band, using default channel {channel_new}"
+                            f"Warning: Channel {
+                                channel
+                            } is invalid for 2.4GHz band, using default channel {
+                                channel_new
+                            }"
                         )
                         channel = channel_new
                     f.write(f"channel={channel}\n")
@@ -110,7 +120,9 @@ class NetServices:
 
                     if channel not in supported_channels:
                         print(
-                            f"Warning: Channel {channel} not supported, using {supported_channels[0]}"
+                            f"Warning: Channel {channel} not supported, using {
+                                supported_channels[0]
+                            }"
                         )
                         channel = supported_channels[0]
 
@@ -291,7 +303,8 @@ class NetServices:
                 f.write(
                     f"dhcp-option=3,{self.config.get('gateway', '192.168.100.1')}\n"
                 )
-                f.write("dhcp-option=6,8.8.8.8,8.8.4.4\n")  # Google for fallback
+                # Google for fallback
+                f.write("dhcp-option=6,8.8.8.8,8.8.4.4\n")
                 f.write("server=8.8.8.8\n")
                 f.write("server=8.8.4.4\n")
 
@@ -596,13 +609,17 @@ class NetServices:
 
         # Start hostapd in the background
         try:
-            if self.config.get("daemon", False):  # For now alway run in foreground
+            if (
+                1 == 2
+            ):  # self.config.get("daemon", False):  # For now always run in foreground
                 return shared.start_service("apmanager_hostapd.service", restart=True)
                 # return self.hostapd_daemonize(hostapd_cmd)
             else:
                 if progress_fn:
                     progress_fn(
-                        f"[{fg.BBLUE}Live{fg.RESET}] {fg.BGREEN}RUNNING IN FOREGROUND{fg.RESET}"
+                        f"[{fg.BBLUE}Live{fg.RESET}] {fg.BGREEN}RUNNING IN FOREGROUND{
+                            fg.RESET
+                        }"
                     )
                 else:
                     print(f"{fg.BGREEN}RUNNING IN FOREGROUND{fg.RESET}")
@@ -625,8 +642,17 @@ class NetServices:
 
             # Save the PID
             self.hostapd_pid = shared.get_hostapd_pid(self.hostapd_pidfile)
-
-            print(f"HOSTAPD RUNNING as PID:{fg.CYAN}{self.hostapd_pid}{fg.RESET}")
+            if self.hostapd_pid is not None:
+                print(f"HOSTAPD RUNNING as PID:{fg.CYAN}{self.hostapd_pid}{fg.RESET}")
+            else:
+                if self.hostapd_rtries > 2:
+                    sys.exit("Hostapd startup failure")
+                channel = shared.get_current_channel()
+                progress_fn(
+                    f"[Retry] {fg.BGREEN}Channel {channel}{fg.RESET}"
+                ) if progress_fn else print("[Retry] Channel", channel)
+                config_manager.set("channel", channel)
+                return self.start_hostapd(progress_fn)
 
             # Success - hostapd is running in background
             print(f"{fg.GREEN}Hostapd started successfully{fg.RESET}")
@@ -689,7 +715,9 @@ class NetServices:
         """Enable Internet sharing using the specified method."""
         if self.config["share_method"] != "none":
             print(
-                f"Sharing Internet using method: {fg.BMAGENTA}{self.config['share_method']}{fg.RESET}"
+                f"Sharing Internet using method: {fg.BMAGENTA}{
+                    self.config['share_method']
+                }{fg.RESET}"
             )
 
             if self.config["share_method"] == "nat":
@@ -701,31 +729,53 @@ class NetServices:
             print("No Internet sharing")
 
     def nat_sharing(self):
+        """
+        Description:\n
+        This setup allows traffic flow\n
+        from gateway_network to internet_iface
+        then from gateway_network -> wifi interface
+        gateway_network -> vwifi_iface
+        vwifi_iface -> gateway_network
+        """
         try:
             # Set up NAT rules
             gateway_network = f"{'.'.join(self.config['gateway'].split('.')[:3])}.0/24"
 
-            # Masquerade traffic from the WiFi network
-            command.run(
-                [
+            # >>>>>>>>>> Masquerade traffic from the WiFi network<<<<<<<<<<<<<
+
+            # Define the rule specification as a list for reuse
+            rule_spec = [
+                "-s",
+                gateway_network,
+                "!",
+                "-o",
+                self.config["wifi_iface"],
+                "-j",
+                "MASQUERADE",
+            ]
+
+            # 1. Check if the rule already exists
+            check_cmd = ["iptables", "-w", "-t", "nat", "-C", "POSTROUTING"] + rule_spec
+
+            # Use check=False because a non-zero exit code is expected if the rule is absent
+            result = subprocess.run(check_cmd, check=False, capture_output=True)
+
+            if result.returncode == 0:
+                # Rule exists, do nothing
+                print("NAT rule already exists. Skipping.")
+            else:
+                # Rule does not exist, insert it
+                insert_cmd = [
                     "iptables",
                     "-w",
                     "-t",
                     "nat",
                     "-I",
                     "POSTROUTING",
-                    "-s",
-                    gateway_network,
-                    "!",
-                    "-o",
-                    self.config["wifi_iface"],
-                    "-j",
-                    "MASQUERADE",
-                ],
-                check=True,
-            )
+                ] + rule_spec
+                command.run(insert_cmd, check=True)
+                # Allow forwarding from WiFi to internet interface
 
-            # Allow forwarding from WiFi to internet
             command.run(
                 [
                     "iptables",
@@ -742,7 +792,7 @@ class NetServices:
                 check=True,
             )
 
-            # Allow forwarding from internet to WiFi
+            # Allow forwarding from internet to WiFi interface
             command.run(
                 [
                     "iptables",
@@ -751,6 +801,44 @@ class NetServices:
                     "FORWARD",
                     "-i",
                     self.config["internet_iface"],
+                    "-d",
+                    gateway_network,
+                    "-j",
+                    "ACCEPT",
+                ],
+                check=True,
+            )
+
+            # Allow traffic forwarding from vwifi_iface to internet interface
+            # Trafic flow:
+            # gateway_network -> vwifi_iface
+            command.run(
+                [
+                    "iptables",
+                    "-w",
+                    "-I",
+                    "FORWARD",
+                    "-i",
+                    self.config["vwifi_iface"],
+                    "-s",
+                    gateway_network,
+                    "-j",
+                    "ACCEPT",
+                ],
+                check=True,
+            )
+
+            # Allow forwarding from internet interface to vwifi_iface interface
+            # Trafic flow:
+            # vwifi_iface -> gateway_network
+            command.run(
+                [
+                    "iptables",
+                    "-w",
+                    "-I",
+                    "FORWARD",
+                    "-o",
+                    self.config["vwifi_iface"],
                     "-d",
                     gateway_network,
                     "-j",
@@ -864,7 +952,9 @@ class NetServices:
 
                 # Set 0ms forward delay
                 with open(
-                    f"/sys/class/net/{self.config['bridge_iface']}/bridge/forward_delay",
+                    f"/sys/class/net/{
+                        self.config['bridge_iface']
+                    }/bridge/forward_delay",
                     "w",
                 ) as f:
                     f.write("0")

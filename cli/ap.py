@@ -34,14 +34,19 @@ class APManagerCLI:
 
         # Filter out None values
         updates = {k: v for k, v in kwargs.items() if v is not None}
-
         if updates:
             # Update main config
             self.config_manager._dict_update(self.config_manager.get_config, updates)
             self.config_manager.save_config()
 
             # Update hostapd config if relevant keys
-            hostapd_keys = {"ssid", "password", "channel", "wpa_version", "hidden"}
+            hostapd_keys = {
+                "ssid",
+                "password",
+                "channel",
+                "wpa_version",
+                "hidden",
+            }
             if any(k in hostapd_keys for k in updates):
                 hostman = ConfigManager(
                     self.config_manager.__bconfdir__ / "hostapd.json"
@@ -50,11 +55,19 @@ class APManagerCLI:
                 hostman.save_config()
 
             # Update network config if relevant keys
-            network_keys = {"wifi_iface", "internet_iface", "gateway", "share_method"}
+            network_keys = {
+                "wifi_iface",
+                "internet_iface",
+                "gateway",
+                "share_method",
+                "no_virt",
+                "daemon",
+                "channel",
+                "ssid",
+                "password",
+            }
             if any(k in network_keys for k in updates):
-                netman = ConfigManager(
-                    self.config_manager.__bconfdir__ / "netconf.json"
-                )
+                netman = ConfigManager(self.config_manager.__bconfdir__ / "config.json")
                 netman._dict_update(None, updates)
                 netman.save_config()
 

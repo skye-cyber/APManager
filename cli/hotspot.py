@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.prompt import Confirm
 from rich.panel import Panel
 from rich.table import Table
-
+import daemon as daemonizer
 from shared import cli
 from ap import APManagerCLI
 
@@ -59,7 +59,7 @@ def hotspot_start(
     no_setup,
 ):
     """Start the hotspot"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     # Update config with CLI options
     updates = {
@@ -95,7 +95,44 @@ def hotspot_start(
                 no_setup=no_setup,
             )
             progress.update(task, completed=100)
+        except KeyboardInterrupt:
+            # User aborted — stop cleanly, no "failed" message.
+            progress.update(task, description="Cancelled by user")
+            sys.exit(0)  # or return, depending on whether you want the caller to see it
 
+        except SystemExit as e:
+            # Something inside setup_accesspoint (or a subprocess wrapper) called sys.exit().
+            code = e.code if e.code is not None else 0
+            if code != 0:
+                progress.update(
+                    task, description="APManager startup exited unexpectedly"
+                )
+                myChannel = cli_obj.config_manager.config.get("channel")
+                console.print(
+                    Panel.fit(
+                        "[bold red]✗ Hotspot failed to start[/bold red]\n\n"
+                        "The startup routine exited before the hotspot came up "
+                        f"(exit code [yellow]{code}[/yellow]).\n"
+                        # "Check the logs, service permissions, and that no other "
+                        # "AP/hostapd/dnsmasq instance is already running.\n"
+                        f"Ensure channel [green]{myChannel}[/green] in config matches wifi interface channel",
+                        title="Startup Failed",
+                    )
+                )
+                raise  # preserve original exit behavior for the caller
+
+        except BaseException as e:
+            # Any other BaseException (not Exception) that would otherwise kill the process.
+            progress.update(task, description="APManager startup crashed")
+            console.print(
+                Panel.fit(
+                    f"[bold red]✗ Hotspot startup crashed[/bold red]\n\n{e!r}",
+                    title="Startup Failed",
+                )
+            )
+            raise
+
+        try:
             if success:
                 from ap_utils.config import config_manager
 
@@ -127,10 +164,14 @@ def hotspot_start(
                         title="AccessPoint Status",
                     )
                 )
-            else:
+            # Only reached on normal completion of setup_accesspoint
+            if not success:
                 console.print("[red]✗ Failed to start hotspot[/red]")
+                return
         except Exception as e:
+            progress.update(task, description="Hotspot process errored")
             console.print(f"[red]Error: {e}[/red]")
+            return
 
 
 @hotspot.command("stop")
@@ -153,7 +194,7 @@ def hotspot_stop(ctx):
 @click.pass_context
 def hotspot_reset(ctx, force, hard):
     """Stop the hotspot"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     if force or Confirm.ask("Reset accesspoint?"):
         with console.status("[bold yellow]Resetting accesspoint..."):
@@ -171,7 +212,7 @@ def hotspot_reset(ctx, force, hard):
 @click.pass_context
 def hotspot_status(ctx):
     """Show hotspot status"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     # Get running instances
     running = cli_obj.manager.network_config.get_running_instances()
@@ -207,7 +248,7 @@ def hotspot_status(ctx):
 @click.pass_context
 def hotspot_interfaces(ctx):
     """List all available interfaces"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     interfaces = cli_obj.manager.get_all_available_ifaces()
 
@@ -240,14 +281,14 @@ def config():
 @click.pass_context
 def config_show(ctx):
     """Show current configuration"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     if cli_obj.config_manager:
         config_data = cli_obj.config_manager.get_config
 
         console.print("[bold]Current Configuration:[/bold]")
         for key, value in config_data.items():
-            if value:  # Skip empty values
+            if value is not None:  # Skip empty values
                 console.print(f"  [cyan]{key}:[/cyan] {value}")
     else:
         console.print("[yellow]No configuration loaded[/yellow]")
@@ -259,7 +300,7 @@ def config_show(ctx):
 @click.pass_context
 def config_set(ctx, key, value):
     """Set a configuration value"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     cli_obj.update_config(**{key: value})
     console.print(f"[green]✓ Set {key} = {value}[/green]")
@@ -270,7 +311,7 @@ def config_set(ctx, key, value):
 @click.pass_context
 def config_edit(ctx, editor):
     """Edit configuration file with text editor"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     if cli_obj.config_manager:
         config_file = cli_obj.config_manager.config_file
@@ -300,7 +341,7 @@ def show_version():
 @click.pass_context
 def system_info(ctx):
     """Show system information"""
-    cli_obj = ctx.obj["cli"]
+    cli_obj: APManagerCLI = ctx.obj["cli"]
 
     info_table = Table(title="System Information", show_header=False)
     info_table.add_column("Property", style="cyan")
