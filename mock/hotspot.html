@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>AP Manager · Hotspot</title>
+<style>
+  :root{
+    --bg:#070a0e; --fg:#cfd8e3; --dim:#5f6d7a; --faint:#2c3742;
+    --accent:#5eead4; --green:#34d399; --blue:#60a5fa; --red:#f87171;
+    --yellow:#fbbf24; --violet:#a78bfa; --panel:#0d1218; --panel2:#111823;
+    --border:#1f2937; --sel:#133347;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"Berkeley Mono","JetBrains Mono",ui-monospace,monospace;font-size:12.5px;overflow:hidden}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100%}
+  .top{display:flex;justify-content:space-between;align-items:center;
+    padding:4px 10px;background:linear-gradient(180deg,#0d1218,#0a0e13);
+    border-bottom:1px solid var(--border);font-size:11px}
+  .top .brand{color:var(--accent);letter-spacing:.18em;font-weight:600}
+  .top .badges{display:flex;gap:14px;color:var(--dim)}
+  .badge b{color:var(--fg);font-weight:600}
+  .badge .up{color:var(--green)} .badge .dn{color:var(--red)}
+  .tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);padding:0 6px}
+  .tab{padding:5px 14px;color:var(--dim);font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel2)}
+  .tab .n{color:var(--faint);margin-right:6px}
+
+  .body{display:grid;grid-template-columns:1.3fr 1fr;gap:1px;background:var(--border);min-height:0}
+  .col{display:flex;flex-direction:column;background:var(--bg);min-height:0;min-width:0;overflow:hidden}
+  .hdr{display:flex;justify-content:space-between;align-items:center;padding:3px 10px;
+    background:var(--panel2);border-bottom:1px solid var(--border);
+    font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:600}
+  .hdr .meta{color:var(--dim);letter-spacing:.04em;font-weight:400}
+  .hdr .meta b{color:var(--fg)}
+
+  /* Grouped form */
+  .group{border-bottom:1px solid var(--border)}
+  .group-h{display:flex;justify-content:space-between;align-items:center;
+    padding:4px 10px;background:#0a1017;color:var(--violet);
+    font-size:10.5px;letter-spacing:.12em;font-weight:600;border-bottom:1px solid var(--border)}
+  .group-h .tag{color:var(--dim);font-weight:400;letter-spacing:.04em}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .field{display:grid;grid-template-columns:14ch 1fr auto;gap:6px;align-items:center;
+    padding:3px 10px;border-bottom:1px solid #141b23;font-size:12px;min-height:22px}
+  .field .k{color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .field .v{color:var(--fg);overflow:hidden;text-overflow:ellipsis}
+  .field .v.editable{color:var(--accent)}
+  .field .v.mono{color:var(--blue)}
+  .field .v.yes{color:var(--green)} .field .v.no{color:var(--dim)} .field .v.warn{color:var(--yellow)}
+  .field .rst{font-size:9.5px;letter-spacing:.06em;padding:0 4px;border-radius:2px;
+    color:var(--dim);border:1px solid var(--faint)}
+  .field .rst.restart{color:var(--yellow);border-color:var(--yellow)}
+  .field .rst.hot{color:var(--green);border-color:var(--green)}
+  .field .rst.portal{color:var(--blue);border-color:var(--blue)}
+  .field .rst.dead{color:var(--dim);text-decoration:line-through;border-color:var(--faint)}
+  .field.sel{background:var(--sel);box-shadow:inset 2px 0 0 var(--accent)}
+
+  /* Rendered output viewer */
+  .rendered{padding:8px 10px;font-family:monospace;font-size:11px;line-height:1.6;
+    color:var(--dim);white-space:pre;overflow:auto;flex:1}
+  .rendered .cmt{color:var(--faint)}
+  .rendered .kw{color:var(--violet)}
+  .rendered .val{color:var(--fg)}
+  .rendered .note{color:var(--yellow)}
+
+  .apply{display:flex;gap:8px;padding:6px 10px;border-top:1px solid var(--border);
+    background:var(--panel2);align-items:center;flex-wrap:wrap}
+  .apply .dirty{color:var(--yellow);font-size:11px}
+  .apply .dirty b{color:var(--fg)}
+  .act{padding:2px 9px;border:1px solid var(--border);border-radius:2px;font-size:11.5px;color:var(--fg)}
+  .act .k{color:var(--accent);margin-right:5px}
+  .act.primary{border-color:var(--green)} .act.primary .k{color:var(--green)}
+  .act.danger{border-color:var(--red)} .act.danger .k{color:var(--red)}
+
+  .footer{display:flex;align-items:center;gap:4px;padding:4px 8px;
+    background:var(--panel2);border-top:1px solid var(--border);font-size:11px}
+  .kc{background:#0f1823;border:1px solid var(--border);padding:0 5px;border-radius:2px}
+  .kc b{color:var(--accent);font-weight:600}
+  .footer .sep{margin:0 8px;color:var(--faint)}
+  .footer .right{margin-left:auto;color:var(--dim)}
+  .footer .right b{color:var(--fg)}
+</style></head><body>
+<div class="app">
+  <div class="top">
+    <div class="brand">◆ AP MANAGER</div>
+    <div class="badges">
+      <span class="badge">hotspot <b class="up">●</b> <span style="color:var(--dim)">xap0 · pid 174816</span></span>
+      <span class="badge">captive <b class="dn">○</b> <span style="color:var(--dim)">port 8001</span></span>
+      <span class="badge">clients <b>4</b> <span style="color:var(--dim)">/ max 100</span></span>
+      <span class="badge">uptime <b>02:41:12</b></span>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab"><span class="n">1</span>DASHBOARD</div>
+    <div class="tab"><span class="n">2</span>DEVICES</div>
+    <div class="tab active"><span class="n">3</span>HOTSPOT</div>
+    <div class="tab"><span class="n">4</span>CAPTIVE</div>
+    <div class="tab"><span class="n">5</span>INTERFACES</div>
+    <div class="tab"><span class="n">6</span>LOGS</div>
+    <div class="tab" style="margin-left:auto;color:var(--faint)">Ctrl+P palette</div>
+  </div>
+
+  <div class="body">
+    <div class="col">
+      <div class="hdr"><span>HOTSPOT CONFIG · editable fields</span>
+        <span class="meta">source: <b>config.json</b> → rendered <b>hostapd.conf</b></span></div>
+
+      <div class="group">
+        <div class="group-h"><span>RADIO</span><span class="tag">requires restart (all)</span></div>
+        <div class="fields">
+          <div class="field"><span class="k">interface</span><span class="v mono">xap0</span><span class="rst restart">restart</span></div>
+          <div class="field sel"><span class="k">ssid</span><span class="v editable">FreeWiFi-KE</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">channel</span><span class="v editable">10</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">hw_mode</span><span class="v">g</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">country_code</span><span class="v">KE</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">ieee80211n</span><span class="v yes">1</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">ieee80211ac</span><span class="v no">0</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">ht_capab</span><span class="v mono">[HT40][SHORT-GI-20]</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">driver</span><span class="v">nl80211</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">mode</span><span class="v">nmcli</span><span class="rst restart">restart</span></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-h"><span>SECURITY</span><span class="tag">requires restart</span></div>
+        <div class="fields">
+          <div class="field"><span class="k">wpa</span><span class="v yes">2</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">wpa_key_mgmt</span><span class="v">WPA-PSK</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">wpa_passphrase</span><span class="v">••••••••••</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">rsn_pairwise</span><span class="v">CCMP</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">macaddr_acl</span><span class="v no">0 (disabled)</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">mac_filter</span><span class="v no">off</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">isolate_clients</span><span class="v no">off</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">auth_algs</span><span class="v">1 (open)</span><span class="rst restart">restart</span></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-h"><span>NETWORK</span><span class="tag">requires restart</span></div>
+        <div class="fields">
+          <div class="field"><span class="k">ip_range</span><span class="v mono">192.168.100.0/24</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">gateway</span><span class="v mono">192.168.100.1</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">dhcp_start</span><span class="v mono">192.168.100.2</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">dhcp_end</span><span class="v mono">192.168.100.254</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">lease_time</span><span class="v">12h</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">dns_servers</span><span class="v mono">1.1.1.1, 8.8.8.8</span><span class="rst restart">restart</span></div>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-h"><span>GENERAL (config.json)</span><span class="tag">mixed</span></div>
+        <div class="fields">
+          <div class="field"><span class="k">CLIENT_INTERFACE</span><span class="v mono">xap0</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">INTERNET_INTERFACE</span><span class="v mono">wlo1</span><span class="rst restart">restart</span></div>
+          <div class="field"><span class="k">SCAN_INTERVAL</span><span class="v editable">1</span><span class="rst hot">hot</span></div>
+          <div class="field"><span class="k">CAPTIVE_PORT</span><span class="v editable">8001</span><span class="rst portal">portal</span></div>
+          <div class="field"><span class="k">USE_API</span><span class="v no">False</span><span class="rst dead">dead</span></div>
+          <div class="field"><span class="k">AUTH_DIR</span><span class="v mono">/etc/ap_manager/auth</span><span class="rst restart">restart</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="hdr"><span>RENDERED · /etc/ap_manager/conf/hostapd.conf</span>
+        <span class="meta" style="color:var(--yellow)">read-only</span></div>
+      <div class="rendered"><span class="cmt"># AUTO-GENERATED by ap_manager — do not edit</span>
+<span class="cmt"># regenerated 2026-11-01 19:16:41 from config.json</span>
+
+<span class="kw">interface</span>=<span class="val">xap0</span>
+<span class="kw">driver</span>=<span class="val">nl80211</span>
+<span class="kw">ssid</span>=<span class="val">FreeWiFi-KE</span>
+<span class="kw">hw_mode</span>=<span class="val">g</span>
+<span class="kw">channel</span>=<span class="val">10</span>
+<span class="kw">country_code</span>=<span class="val">KE</span>
+<span class="kw">ieee80211n</span>=<span class="val">1</span>
+<span class="kw">ieee80211ac</span>=<span class="val">0</span>
+<span class="kw">ht_capab</span>=<span class="val">[HT40][SHORT-GI-20]</span>
+
+<span class="kw">wpa</span>=<span class="val">2</span>
+<span class="kw">wpa_key_mgmt</span>=<span class="val">WPA-PSK</span>
+<span class="kw">wpa_passphrase</span>=<span class="val">••••••••••••</span>
+<span class="kw">rsn_pairwise</span>=<span class="val">CCMP</span>
+<span class="kw">auth_algs</span>=<span class="val">1</span>
+<span class="kw">macaddr_acl</span>=<span class="val">0</span>
+
+<span class="kw">bridge</span>=<span class="val">br-75184f</span>
+<span class="kw">isolate_clients</span>=<span class="val">0</span>
+<span class="cmt"># DHCP handled by dnsmasq (dnsmasq.conf)</span>
+
+<span class="note"># 2 field(s) modified since last render — press Ctrl+A to apply</span></div>
+
+      <div class="hdr" style="border-top:1px solid var(--border)"><span>DIFF · pending apply</span>
+        <span class="meta">2 changes</span></div>
+      <div style="padding:6px 10px;font-family:monospace;font-size:11px;line-height:1.7;overflow:auto">
+        <div style="color:var(--dim)">ssid</div>
+        <div><span style="color:var(--red)">− FreeWiFi-KE</span></div>
+        <div><span style="color:var(--green)">+ FreeWiFi-KE-5G</span></div>
+        <div style="color:var(--dim);margin-top:4px">channel</div>
+        <div><span style="color:var(--red)">− 10</span></div>
+        <div><span style="color:var(--green)">+ 11</span></div>
+      </div>
+
+      <div class="apply">
+        <span class="dirty">⚠ <b>2</b> pending · restart required</span>
+        <span style="margin-left:auto"></span>
+        <span class="act danger"><span class="k">Esc</span>discard</span>
+        <span class="act primary"><span class="k">Ctrl+A</span>apply &amp; restart</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="kc"><b>1</b>..<b>6</b></span>screens
+    <span class="sep">│</span>
+    <span class="kc"><b>j</b>/<b>k</b></span>field nav
+    <span class="kc"><b>Enter</b></span>edit
+    <span class="kc"><b>Ctrl+A</b></span>apply
+    <span class="sep">│</span>
+    <span class="kc"><b>Ctrl+P</b></span>palette
+    <span class="kc"><b>q</b></span>quit
+    <span class="right">dirty <b>2</b> · restart pending</span>
+  </div>
+</div>
+</body></html>

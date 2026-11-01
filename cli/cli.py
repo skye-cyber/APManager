@@ -22,6 +22,9 @@ def entry():
         import hotspot
         import captive
         import monitor
+        import tuiapp
+
+        __all__ = [initializer, auth, hotspot, captive, monitor, tuiapp]  # noqa: F401
         from shared import cli
 
         cli()

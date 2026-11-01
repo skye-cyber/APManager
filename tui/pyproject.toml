@@ -1,0 +1,9 @@
+[project.scripts]
+apmanager-tui = "app:main"
+
+[tool.setuptools]
+py-modules = ["app", "adapters", "auth", "config_store", "models"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["screens*", "themes*"]

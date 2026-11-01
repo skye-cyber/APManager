@@ -1,6 +1,6 @@
 rich
-click
+click # was 13.9.4
 keyboard
 colorama
 aiohttp
-# daemon
+textual

@@ -1,0 +1,537 @@
+
+/* ============================================================
+   APManager — Vim Dark
+   Based on: Vim Dark-modified
+   Style: Near-black terminal / restrained syntax colours
+   ============================================================ */
+
+$background: #000000;
+$surface: #090909;
+$panel: #101010;
+$boost: #1b1b1b;
+
+$foreground: #b2b2b2;
+$text-muted: #666666;
+
+$primary: #5fd7ff;
+$secondary: #87ffaf;
+$accent: #cd00cd;
+
+$success: #87ffaf;
+$warning: #ffff54;
+$error: #ff5454;
+
+$border: #303030;
+$border-blurred: #202020;
+
+$selection: #232323;
+$highlight: #25256f;
+
+/* ------------------------------------------------------------
+   Global
+   ------------------------------------------------------------ */
+
+Screen {
+    background: $background;
+    color: $foreground;
+}
+
+Widget {
+    color: $foreground;
+}
+
+Static {
+    color: $foreground;
+}
+
+Label {
+    color: $foreground;
+}
+
+.caption,
+.muted,
+.text-muted {
+    color: $text-muted;
+}
+
+.title {
+    color: #e0ffff;
+    text-style: bold;
+}
+
+.subtitle {
+    color: #87ffaf;
+}
+
+/* ------------------------------------------------------------
+   Application shell
+   ------------------------------------------------------------ */
+
+.app-shell {
+    background: $background;
+}
+
+.top-bar {
+    height: 3;
+    background: #080808;
+    border-bottom: solid #303030;
+    padding: 0 1;
+}
+
+.app-brand {
+    color: #87ffaf;
+    text-style: bold;
+}
+
+.app-version {
+    color: #666666;
+}
+
+.status-bar {
+    height: 1;
+    background: #101010;
+    color: #888888;
+}
+
+Footer {
+    background: #080808;
+    color: #888888;
+}
+
+Header {
+    background: #080808;
+    color: #87ffaf;
+}
+
+/* ------------------------------------------------------------
+   Navigation
+   ------------------------------------------------------------ */
+
+.navigation {
+    height: 3;
+    background: #080808;
+    border-bottom: solid #303030;
+    padding: 0 1;
+}
+
+.navigation Button {
+    min-width: 10;
+    height: 3;
+    border: none;
+    background: transparent;
+    color: #777777;
+    padding: 0 2;
+}
+
+.navigation Button:hover {
+    background: #1b1b1b;
+    color: #e0ffff;
+}
+
+.navigation Button:focus {
+    background: #232323;
+    color: #5fd7ff;
+}
+
+.navigation Button.active {
+    background: #171717;
+    color: #87ffaf;
+    text-style: bold;
+    border-bottom: tall #87ffaf;
+}
+
+/* ------------------------------------------------------------
+   Panels and containers
+   ------------------------------------------------------------ */
+
+.panel {
+    background: $surface;
+    border: solid $border;
+    padding: 1;
+}
+
+.panel:focus-within {
+    border: solid #5fd7ff;
+}
+
+.panel-title {
+    color: #87ffaf;
+    text-style: bold;
+}
+
+.panel-subtitle {
+    color: #666666;
+}
+
+.panel-header {
+    height: 1;
+    background: #101010;
+    color: #87ffaf;
+    text-style: bold;
+}
+
+.panel-footer {
+    color: #666666;
+    border-top: solid #252525;
+}
+
+/* ------------------------------------------------------------
+   Buttons
+   ------------------------------------------------------------ */
+
+Button {
+    background: #171717;
+    color: #b2b2b2;
+    border: solid #383838;
+}
+
+Button:hover {
+    background: #252525;
+    color: #e0ffff;
+    border: solid #5fd7ff;
+}
+
+Button:focus {
+    background: #232323;
+    color: #87ffaf;
+    border: solid #87ffaf;
+}
+
+Button.-primary {
+    background: #173020;
+    color: #87ffaf;
+    border: solid #477d55;
+}
+
+Button.-primary:hover {
+    background: #21442c;
+}
+
+Button.-success {
+    background: #173020;
+    color: #87ffaf;
+    border: solid #477d55;
+}
+
+Button.-warning {
+    background: #302b12;
+    color: #ffff54;
+    border: solid #716522;
+}
+
+Button.-error {
+    background: #350f0f;
+    color: #ff5454;
+    border: solid #873535;
+}
+
+/* ------------------------------------------------------------
+   Inputs and selectors
+   ------------------------------------------------------------ */
+
+Input {
+    background: #080808;
+    color: #e0ffff;
+    border: solid #383838;
+}
+
+Input:focus {
+    border: tall #5fd7ff;
+    background: #101010;
+}
+
+Input.-invalid {
+    border: solid #ff5454;
+}
+
+TextArea {
+    background: #080808;
+    color: #b2b2b2;
+    border: solid #383838;
+}
+
+TextArea:focus {
+    border: solid #5fd7ff;
+}
+
+Select {
+    background: #101010;
+    color: #b2b2b2;
+    border: solid #383838;
+}
+
+Select:focus {
+    border: solid #5fd7ff;
+}
+
+.selection-list {
+    background: #101010;
+    border: solid #383838;
+}
+
+.selection-list--option-highlighted {
+    background: #232323;
+    color: #87ffaf;
+}
+
+/* ------------------------------------------------------------
+   Data tables
+   ------------------------------------------------------------ */
+
+DataTable {
+    background: #080808;
+    color: #b2b2b2;
+    border: solid #303030;
+}
+
+DataTable > .datatable--header {
+    background: #151515;
+    color: #5fd7ff;
+    text-style: bold;
+}
+
+DataTable > .datatable--cursor {
+    background: #232323;
+    color: #e0ffff;
+    text-style: bold;
+}
+
+DataTable > .datatable--hover {
+    background: #171717;
+}
+
+DataTable > .datatable--even-row {
+    background: #090909;
+}
+
+DataTable > .datatable--odd-row {
+    background: #0d0d0d;
+}
+
+/* ------------------------------------------------------------
+   Tabs
+   ------------------------------------------------------------ */
+
+TabbedContent {
+    background: $background;
+}
+
+Tabs {
+    background: #080808;
+    border-bottom: solid #303030;
+}
+
+Tab {
+    background: #101010;
+    color: #777777;
+    padding: 0 2;
+}
+
+Tab:hover {
+    background: #1b1b1b;
+    color: #e0ffff;
+}
+
+Tab.-active {
+    background: #171717;
+    color: #87ffaf;
+    text-style: bold;
+}
+
+Underline {
+    color: #87ffaf;
+}
+
+/* ------------------------------------------------------------
+   Status indicators
+   ------------------------------------------------------------ */
+
+.status-online {
+    color: #87ffaf;
+    text-style: bold;
+}
+
+.status-offline {
+    color: #ff5454;
+    text-style: bold;
+}
+
+.status-warning {
+    color: #ffff54;
+    text-style: bold;
+}
+
+.status-neutral {
+    color: #888888;
+}
+
+.status-info {
+    color: #5fd7ff;
+}
+
+/* ------------------------------------------------------------
+   Metrics and instrumentation
+   ------------------------------------------------------------ */
+
+.metric-value {
+    color: #e0ffff;
+    text-style: bold;
+}
+
+.metric-label {
+    color: #777777;
+}
+
+.metric-positive {
+    color: #87ffaf;
+}
+
+.metric-negative {
+    color: #ff5454;
+}
+
+.metric-warning {
+    color: #ffff54;
+}
+
+Gauge {
+    color: #87ffaf;
+    background: #252525;
+}
+
+ProgressBar {
+    color: #87ffaf;
+    background: #252525;
+}
+
+Sparkline {
+    color: #5fd7ff;
+}
+
+/* ------------------------------------------------------------
+   Logs and messages
+   ------------------------------------------------------------ */
+
+.log-view {
+    background: #050505;
+    color: #b2b2b2;
+    border: solid #303030;
+}
+
+.log-debug {
+    color: #666666;
+}
+
+.log-info {
+    color: #5fd7ff;
+}
+
+.log-success {
+    color: #87ffaf;
+}
+
+.log-warning {
+    color: #ffff54;
+}
+
+.log-error {
+    color: #ff5454;
+}
+
+.log-timestamp {
+    color: #666666;
+}
+
+.log-source {
+    color: #cd00cd;
+    text-style: bold;
+}
+
+/* ------------------------------------------------------------
+   Command palette and modal surfaces
+   ------------------------------------------------------------ */
+
+CommandPalette {
+    background: #090909;
+    border: tall #5fd7ff;
+}
+
+ModalScreen {
+    background: #000000 70%;
+}
+
+.modal-container {
+    background: #101010;
+    border: solid #5fd7ff;
+    padding: 1 2;
+}
+
+.modal-title {
+    color: #87ffaf;
+    text-style: bold;
+}
+
+.modal-description {
+    color: #888888;
+}
+
+/* ------------------------------------------------------------
+   Scrollbars
+   ------------------------------------------------------------ */
+
+Scrollbar {
+    background: #080808;
+}
+
+Scrollbar > .scrollbar--thumb {
+    background: #454545;
+}
+
+Scrollbar > .scrollbar--thumb:hover {
+    background: #5fd7ff;
+}
+
+Scrollbar > .scrollbar--track {
+    background: #101010;
+}
+
+/* ------------------------------------------------------------
+   Keyboard hints
+   ------------------------------------------------------------ */
+
+.key-hint {
+    color: #777777;
+}
+
+.keycap {
+    background: #202020;
+    color: #e0ffff;
+    border: solid #454545;
+    text-style: bold;
+}
+
+.key-hint-label {
+    color: #666666;
+}
+
+/* ------------------------------------------------------------
+   Notifications
+   ------------------------------------------------------------ */
+
+Notification {
+    background: #151515;
+    color: #b2b2b2;
+    border: solid #5fd7ff;
+}
+
+Notification.-success {
+    border: solid #87ffaf;
+}
+
+Notification.-warning {
+    border: solid #ffff54;
+}
+
+Notification.-error {
+    border: solid #ff5454;
+}

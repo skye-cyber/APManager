@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>AP Manager · Interfaces</title>
+<style>
+  :root{
+    --bg:#070a0e; --fg:#cfd8e3; --dim:#5f6d7a; --faint:#2c3742;
+    --accent:#5eead4; --green:#34d399; --blue:#60a5fa; --red:#f87171;
+    --yellow:#fbbf24; --violet:#a78bfa; --panel:#0d1218; --panel2:#111823;
+    --border:#1f2937; --sel:#133347;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"Berkeley Mono","JetBrains Mono",ui-monospace,monospace;font-size:12.5px;overflow:hidden}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100%}
+  .top{display:flex;justify-content:space-between;align-items:center;
+    padding:4px 10px;background:linear-gradient(180deg,#0d1218,#0a0e13);
+    border-bottom:1px solid var(--border);font-size:11px}
+  .top .brand{color:var(--accent);letter-spacing:.18em;font-weight:600}
+  .top .badges{display:flex;gap:14px;color:var(--dim)}
+  .badge b{color:var(--fg);font-weight:600}
+  .badge .up{color:var(--green)} .badge .dn{color:var(--red)}
+  .tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);padding:0 6px}
+  .tab{padding:5px 14px;color:var(--dim);font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel2)}
+  .tab .n{color:var(--faint);margin-right:6px}
+
+  .body{display:grid;grid-template-rows:1.2fr 1fr;gap:1px;background:var(--border);min-height:0}
+  .pane{background:var(--bg);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .hdr{display:flex;justify-content:space-between;align-items:center;padding:3px 10px;
+    background:var(--panel2);border-bottom:1px solid var(--border);
+    font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:600}
+  .hdr .meta{color:var(--dim);letter-spacing:.04em;font-weight:400}
+  .hdr .meta b{color:var(--fg)}
+
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th,td{text-align:left;padding:4px 10px;border-bottom:1px solid #141b23;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+  th{color:var(--dim);font-weight:500;font-size:10.5px;letter-spacing:.08em;
+    background:var(--panel);position:sticky;top:0;z-index:1}
+  tbody tr.sel{background:var(--sel)}
+  tbody tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+  td.name{color:var(--blue)}
+  td.mono{color:var(--dim);font-size:11px}
+  .st-up{color:var(--green)} .st-down{color:var(--red)} .st-unknown{color:var(--dim)}
+  .type-phy{color:var(--violet)} .type-virt{color:var(--accent)}
+  .role-inet{color:var(--blue)} .role-ap{color:var(--violet)} .role-bridge{color:var(--green)}
+
+  .detail{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);
+    flex:1;min-height:0;overflow:hidden}
+  .dpane{background:var(--bg);padding:8px 12px;font-family:monospace;font-size:11px;
+    line-height:1.75;overflow:auto;min-height:0}
+  .dpane .k{color:var(--violet);display:inline-block;min-width:12ch}
+  .dpane .v{color:var(--fg)}
+  .dpane .v.dim{color:var(--dim)} .dpane .v.g{color:var(--green)}
+  .dpane .v.r{color:var(--red)} .dpane .v.y{color:var(--yellow)}
+  .dpane .cmt{color:var(--faint)}
+
+  .footer{display:flex;align-items:center;gap:4px;padding:4px 8px;
+    background:var(--panel2);border-top:1px solid var(--border);font-size:11px}
+  .kc{background:#0f1823;border:1px solid var(--border);padding:0 5px;border-radius:2px}
+  .kc b{color:var(--accent);font-weight:600}
+  .footer .sep{margin:0 8px;color:var(--faint)}
+  .footer .right{margin-left:auto;color:var(--dim)}
+  .footer .right b{color:var(--fg)}
+</style></head><body>
+<div class="app">
+  <div class="top">
+    <div class="brand">◆ AP MANAGER</div>
+    <div class="badges">
+      <span class="badge">hotspot <b class="up">●</b> <span style="color:var(--dim)">xap0 · pid 174816</span></span>
+      <span class="badge">captive <b class="dn">○</b> <span style="color:var(--dim)">port 8001</span></span>
+      <span class="badge">clients <b>4</b> <span style="color:var(--dim)">/ max 100</span></span>
+      <span class="badge">uptime <b>02:41:12</b></span>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab"><span class="n">1</span>DASHBOARD</div>
+    <div class="tab"><span class="n">2</span>DEVICES</div>
+    <div class="tab"><span class="n">3</span>HOTSPOT</div>
+    <div class="tab"><span class="n">4</span>CAPTIVE</div>
+    <div class="tab active"><span class="n">5</span>INTERFACES</div>
+    <div class="tab"><span class="n">6</span>LOGS</div>
+    <div class="tab" style="margin-left:auto;color:var(--faint)">Ctrl+P palette</div>
+  </div>
+
+  <div class="body">
+    <div class="pane">
+      <div class="hdr"><span>INTERFACES</span>
+        <span class="meta"><b>5</b> total · <b style="color:var(--green)">3 up</b> · <b style="color:var(--red)">2 down</b></span></div>
+      <div style="overflow:auto;min-height:0;flex:1">
+        <table>
+          <thead><tr>
+            <th style="width:14ch">name</th>
+            <th style="width:10ch">type</th>
+            <th style="width:14ch">role</th>
+            <th style="width:8ch">state</th>
+            <th style="width:18ch">mac</th>
+            <th style="width:18ch">ip</th>
+            <th style="width:14ch">rx/tx</th>
+          </tr></thead>
+          <tbody>
+            <tr class="sel">
+              <td class="name">wlo1</td>
+              <td class="type-phy">phy</td>
+              <td class="role-inet">internet</td>
+              <td class="st-up">● up</td>
+              <td class="mono">aa:bb:cc:11:22:33</td>
+              <td class="mono">192.168.1.42/24</td>
+              <td class="mono">12.1M / 5.4M</td>
+            </tr>
+            <tr>
+              <td class="name">enp0s25</td>
+              <td class="type-phy">phy</td>
+              <td class="role-inet">internet</td>
+              <td class="st-down">○ down</td>
+              <td class="mono">aa:bb:cc:11:22:34</td>
+              <td class="mono">—</td>
+              <td class="mono">0 / 0</td>
+            </tr>
+            <tr>
+              <td class="name">xap0</td>
+              <td class="type-virt">virtual</td>
+              <td class="role-ap">ap</td>
+              <td class="st-up">● up</td>
+              <td class="mono">aa:bb:cc:11:22:35</td>
+              <td class="mono">192.168.100.1/24</td>
+              <td class="mono">62.2M / 202.3M</td>
+            </tr>
+            <tr>
+              <td class="name">br-75184f</td>
+              <td class="type-virt">bridge</td>
+              <td class="role-bridge">bridge</td>
+              <td class="st-up">● up</td>
+              <td class="mono">aa:bb:cc:11:22:36</td>
+              <td class="mono">—</td>
+              <td class="mono">62.2M / 202.3M</td>
+            </tr>
+            <tr>
+              <td class="name">lo</td>
+              <td class="type-virt">loopback</td>
+              <td style="color:var(--dim)">local</td>
+              <td class="st-up">● up</td>
+              <td class="mono">00:00:00:00:00:00</td>
+              <td class="mono">127.0.0.1/8</td>
+              <td class="mono">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="pane" style="border-top:1px solid var(--border)">
+      <div class="hdr"><span>DETAIL · wlo1</span>
+        <span class="meta">phy80211 · driver <b>iwlwifi</b></span></div>
+      <div class="detail">
+        <div class="dpane">
+          <div><span class="k">interface</span><span class="v">wlo1</span></div>
+          <div><span class="k">mac</span><span class="v">aa:bb:cc:11:22:33</span></div>
+          <div><span class="k">state</span><span class="v g">UP</span></div>
+          <div><span class="k">mtu</span><span class="v">1500</span></div>
+          <div><span class="k">ipv4</span><span class="v">192.168.1.42/24</span></div>
+          <div><span class="k">gateway</span><span class="v">192.168.1.1</span></div>
+          <div><span class="k">rx bytes</span><span class="v" style="color:var(--blue)">12,104,551,220</span></div>
+          <div><span class="k">tx bytes</span><span class="v" style="color:var(--accent)">5,420,918,004</span></div>
+          <div><span class="k">rx packets</span><span class="v">9,842,110</span></div>
+          <div><span class="k">tx packets</span><span class="v">7,204,938</span></div>
+          <div><span class="k">errors</span><span class="v dim">0</span></div>
+          <div><span class="k">drops</span><span class="v dim">0</span></div>
+        </div>
+        <div class="dpane">
+          <div style="color:var(--accent);font-size:10.5px;letter-spacing:.12em;margin-bottom:4px">PHY80211 · wlo1</div>
+          <div><span class="k">phy</span><span class="v">phy0</span></div>
+          <div><span class="k">channel</span><span class="v">6 (2.437 GHz)</span></div>
+          <div><span class="k">band</span><span class="v">2.4 GHz</span></div>
+          <div><span class="k">width</span><span class="v">20 MHz</span></div>
+          <div><span class="k">txpower</span><span class="v">20 dBm</span></div>
+          <div><span class="k">bitrate</span><span class="v">144.4 MBit/s</span></div>
+          <div><span class="k">signal</span><span class="v g">−48 dBm</span></div>
+          <div><span class="k">ssid</span><span class="v">HomeNet-5G</span></div>
+          <div><span class="k">bssid</span><span class="v dim">aa:bb:cc:99:88:77</span></div>
+          <div class="cmt" style="margin-top:6px"># xap0 is a virtual AP on phy0 — see Hotspot screen</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="kc"><b>1</b>..<b>6</b></span>screens
+    <span class="sep">│</span>
+    <span class="kc"><b>j</b>/<b>k</b></span>iface nav
+    <span class="kc"><b>i</b></span>phy detail
+    <span class="kc"><b>Ctrl+P</b></span>palette
+    <span class="kc"><b>q</b></span>quit
+    <span class="right">last update <b>19:16:43</b></span>
+  </div>
+</div>
+</body></html>

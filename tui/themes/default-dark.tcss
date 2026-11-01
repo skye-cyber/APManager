@@ -1,0 +1,223 @@
+
+/* APManager · graphite / signal palette */
+Screen {
+    background: #0b1016;
+    color: #d5dee8;
+}
+Header, Footer {
+    background: #101923;
+    color: #8fa4b8;
+}
+#topline {
+    height: 2;
+    background: #101923;
+    border-bottom: solid #263544;
+    padding: 0 2;
+}
+#brand { width: 1fr; color: #7dd3c7; text-style: bold; }
+#service-summary { width: auto; color: #9db0c2; }
+#attention-strip {
+    height: 1;
+    background: #1b2025;
+    padding: 0 2;
+}
+.attention-label { width: 12; color: #e8bd70; text-style: bold; }
+#attention-content { width: 1fr; color: #e8bd70; }
+#command-palette-button {
+    width: auto;
+    min-width: 22;
+    height: 1;
+    border: none;
+    background: #151d27;
+    color: #8b9aaa;
+    padding: 0 1;
+}
+#navigation {
+    height: 3;
+    background: #0b0e13;
+    border-bottom: solid #242b35;
+    padding: 0 1;
+    align: left middle;
+}
+.nav-item {
+    width: 1fr;
+    min-width: 12;
+    height: 2;
+    border: none;
+    background: #0b0e13;
+    color: #737f8e;
+    padding: 0 1;
+    content-align: center middle;
+}
+.nav-item:hover { background: #171d27; color: #d6deea; }
+.nav-item.-primary {
+    background: #171f2a;
+    color: #a6e3a1;
+    text-style: bold;
+    border-bottom: tall #a6e3a1;
+}
+#panel-toggle {
+    width: 12;
+    min-width: 12;
+    height: 2;
+    border: solid #343d4a;
+    background: #141a23;
+    color: #a7b1c0;
+    padding: 0 1;
+}
+#screen-switcher { height: 1fr; }
+DashboardScreen { height: 1fr; }
+#dashboard-grid { height: 1fr; }
+.dashboard-column {
+    height: 1fr;
+    padding: 1 2;
+    border-right: solid #263544;
+}
+.metrics-column { width: 34%; }
+.traffic-column { width: 38%; }
+.events-column { width: 28%; border-right: none; }
+.section-title {
+    height: 1;
+    color: #7dd3c7;
+    text-style: bold;
+    border-bottom: solid #314353;
+    margin-bottom: 1;
+}
+.metric-row {
+    height: 2;
+    color: #a9bac9;
+    border-bottom: dashed #263544;
+}
+.chart-label, .muted { color: #8195a8; }
+Sparkline { height: 5; color: #78a9d1; margin-bottom: 1; }
+#tx-sparkline { color: #7dd3c7; }
+.empty-state { color: #71869a; padding: 1; }
+.event { height: auto; min-height: 2; border-bottom: solid #202d39; color: #b9c7d4; }
+.event-warning, .warning { color: #e8bd70; }
+.event-error { color: #e78383; }
+.event-success { color: #7dd3c7; }
+#throughput-footer {
+    height: 1;
+    background: #121d27;
+    border-top: solid #263544;
+}
+#footer-rx, #footer-tx, #footer-interface {
+    width: 1fr; padding: 0 2; color: #8bb8df;
+}
+#footer-tx { color: #7dd3c7; }
+#footer-interface { text-align: right; color: #9bc7b9; }
+DevicesScreen, HotspotScreen, CaptiveScreen, InterfacesScreen, LogsScreen { padding: 1 2; }
+DataTable { height: 1fr; border: solid #2b3c4b; }
+.screen-heading {
+    height: 2;
+    align: left middle;
+    margin-bottom: 1;
+}
+.eyebrow { color: #7dd3c7; text-style: bold; width: auto; margin-right: 2; }
+.state-chip {
+    color: #e8bd70;
+    background: #25251f;
+    padding: 0 1;
+    width: auto;
+}
+#hotspot-layout { height: 1fr; }
+.form-column {
+    width: 48%;
+    padding: 1 2;
+    border: solid #2b3c4b;
+    margin-right: 1;
+}
+.preview-column {
+    width: 52%;
+    padding: 1 2;
+    border: solid #2b3c4b;
+}
+.field-label { color: #91a5b8; margin-top: 1; }
+Input, Select, TextArea {
+    background: #111b25;
+    border: tall #304354;
+    color: #d5dee8;
+    margin-bottom: 1;
+    width: 34;
+    max-width: 100%;
+}
+Input:focus, Select:focus, TextArea:focus { border: tall #7dd3c7; }
+#log-search { width: 38; max-width: 45%; }
+#log-severity { width: 20; }
+#log-source { width: 20; }
+#hotspot-interface, #hotspot-ssid, #hotspot-channel,
+#hotspot-security, #hotspot-passphrase { width: 36; max-width: 100%; }
+.code-preview {
+    height: 8;
+    padding: 1 2;
+    background: #080d12;
+    border: solid #263544;
+    color: #a9c5d8;
+}
+.status-line { height: 2; padding: 0 1; border-bottom: dashed #263544; }
+.helper-note { color: #71869a; padding: 1 0; }
+.action-row { height: 2; margin-top: 1; }
+.key-hint { color: #9db0c2; margin-right: 2; }
+#captive-overview { height: 7; margin-bottom: 1; }
+.stat-card {
+    width: 1fr;
+    border: solid #2b3c4b;
+    padding: 1 2;
+    margin-right: 1;
+}
+.card-label { color: #8195a8; text-style: bold; }
+.big-status { text-style: bold; margin-top: 1; }
+.big-number { color: #e1e8ef; text-style: bold; }
+#captive-content { height: 1fr; }
+.policy-column { width: 58%; margin-right: 1; }
+.auth-column { width: 42%; border: solid #2b3c4b; padding: 1 2; }
+#interfaces-layout { height: 1fr; }
+.interfaces-list { width: 58%; margin-right: 1; }
+.interface-inspector { width: 42%; border: solid #2b3c4b; padding: 1 2; }
+.inspector-title { color: #e1e8ef; text-style: bold; }
+.detail-block { color: #a9bac9; padding: 1 0; }
+#log-toolbar { height: 3; }
+#log-search { width: 2fr; margin-right: 1; }
+#log-severity { width: 1fr; margin-right: 1; }
+#log-source { width: 1fr; }
+#log-stream-heading {
+    height: 1;
+    background: #17232e;
+    color: #8297aa;
+    text-style: bold;
+    padding: 0 1;
+}
+.log-time { width: 12; }
+.log-source { width: 12; }
+.log-level { width: 10; }
+.log-message { width: 1fr; }
+.log-stream { height: 1fr; border: solid #2b3c4b; padding: 0 1; }
+.log-entry { height: 1; color: #b4c2cf; }
+.log-warning { color: #e8bd70; }
+.log-error { color: #e78383; }
+.log-info { color: #9eb1c2; }
+Screen.-medium {
+    .events-column { display: none; }
+    .metrics-column { width: 42%; }
+    .traffic-column { width: 58%; }
+
+    .auth-column { display: none; }
+}
+Screen.-narrow {
+    #dashboard-grid { layout: vertical; }
+    .dashboard-column { width: 1fr; height: auto; }
+    .traffic-column, .events-column { display: none; }
+    #service-summary { display: none; }
+    #navigation { height: 3; overflow-x: auto; }
+    .nav-item { min-width: 10; padding: 0; }
+    #command-palette-button { min-width: 9; content-align: center middle; }
+    .nav-item { padding: 0 1; }
+    #hotspot-layout, #captive-content, #interfaces-layout { layout: vertical; }
+    .form-column, .preview-column, .policy-column, .auth-column,
+    .interfaces-list, .interface-inspector { width: 1fr; height: auto; margin: 0 0 1 0; }
+    #captive-overview { height: auto; }
+    .stat-card { height: 5; }
+    #log-toolbar { height: auto; }
+    #log-search, #log-severity, #log-source { width: 1fr; }
+    .log-source, .log-level { display: none; }
+}

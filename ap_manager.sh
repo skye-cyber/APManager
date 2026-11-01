@@ -5,7 +5,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_SCRIPT="$SCRIPT_DIR/ap_cli.py"
-echo $PYTHON_SCRIPT
+echo "$PYTHON_SCRIPT"
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -75,20 +75,20 @@ show_usage() {
 interactive_configure() {
     echo -e "${YELLOW}Interactive Hotspot Configuration${NC}"
 
-    read -p "Enter SSID [MyCustomHotspot]: " ssid
+    read -pr "Enter SSID [MyCustomHotspot]: " ssid
     ssid=${ssid:-MyCustomHotspot}
 
-    read -sp "Enter Password [StrongPassword123]: " password
+    read -spr "Enter Password [StrongPassword123]: " password
     password=${password:-StrongPassword123}
     echo
 
-    read -p "Enter Interface [wlan0]: " interface
+    read -pr "Enter Interface [wlan0]: " interface
     interface=${interface:-wlan0}
 
     echo "Select mode:"
     echo "1) NetworkManager (nmcli) - Recommended for desktop"
     echo "2) systemd-networkd - Advanced users"
-    read -p "Choose [1]: " mode_choice
+    read -pr "Choose [1]: " mode_choice
 
     case $mode_choice in
         2) mode="systemd" ;;

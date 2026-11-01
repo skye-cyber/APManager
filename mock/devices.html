@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>AP Manager · Devices</title>
+<style>
+  :root{
+    --bg:#070a0e; --fg:#cfd8e3; --dim:#5f6d7a; --faint:#2c3742;
+    --accent:#5eead4; --green:#34d399; --blue:#60a5fa; --red:#f87171;
+    --yellow:#fbbf24; --violet:#a78bfa; --panel:#0d1218; --panel2:#111823;
+    --border:#1f2937; --sel:#133347; --sel2:#0f2a3a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"Berkeley Mono","JetBrains Mono","Fira Code",ui-monospace,monospace;
+    font-size:12.5px;overflow:hidden}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100%}
+
+  /* Top status strip: like a terminal title bar with live badges */
+  .top{display:flex;justify-content:space-between;align-items:center;
+    padding:4px 10px;background:linear-gradient(180deg,#0d1218,#0a0e13);
+    border-bottom:1px solid var(--border);font-size:11px}
+  .top .brand{color:var(--accent);letter-spacing:.18em;font-weight:600}
+  .top .badges{display:flex;gap:14px;color:var(--dim)}
+  .badge b{color:var(--fg);font-weight:600}
+  .badge .up{color:var(--green)} .badge .dn{color:var(--red)} .badge .wn{color:var(--yellow)}
+
+  /* Tab strip — active tab has underline + accent */
+  .tabs{display:flex;gap:0;background:var(--panel);border-bottom:1px solid var(--border);padding:0 6px}
+  .tab{padding:5px 14px;color:var(--dim);font-size:11px;letter-spacing:.08em;
+    border-bottom:2px solid transparent;cursor:pointer}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel2)}
+  .tab .n{color:var(--faint);margin-right:6px}
+
+  .body{display:grid;grid-template-columns:2.4fr 1.1fr;gap:1px;background:var(--border);min-height:0}
+  .col{display:flex;flex-direction:column;background:var(--bg);min-height:0;min-width:0}
+
+  /* Section headers: inverted, uppercase, with counters on the right */
+  .hdr{display:flex;justify-content:space-between;align-items:center;
+    padding:3px 10px;background:var(--panel2);border-bottom:1px solid var(--border);
+    font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:600}
+  .hdr .counters{color:var(--dim);letter-spacing:.04em;font-weight:400}
+  .hdr .counters b{color:var(--fg)}
+
+  /* Filter input appears as a command-like field */
+  .filterbar{display:flex;align-items:center;gap:8px;padding:4px 10px;
+    border-bottom:1px solid var(--border);background:var(--bg);font-size:11px}
+  .filterbar .prompt{color:var(--accent)}
+  .filterbar .input{color:var(--fg)}
+  .filterbar .cursor{background:var(--accent);color:var(--bg);padding:0 2px;animation:blink 1.1s steps(2,start) infinite}
+  @keyframes blink{to{visibility:hidden}}
+  .filterbar .chips{margin-left:auto;display:flex;gap:6px;color:var(--dim)}
+  .chip{padding:0 6px;border:1px solid var(--border);border-radius:2px;font-size:10px}
+  .chip.on{color:var(--green);border-color:var(--green)}
+
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th,td{text-align:left;padding:2px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    border-bottom:1px solid #141b23;font-size:12px}
+  th{color:var(--dim);font-weight:500;font-size:10.5px;letter-spacing:.08em;
+    background:var(--panel);position:sticky;top:0}
+  tbody tr{height:20px}
+  tbody tr.sel{background:var(--sel)}
+  tbody tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+  td.mac{color:var(--blue)}
+  td.ip{color:var(--fg)}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .dot.g{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .dot.r{background:var(--red);box-shadow:0 0 6px var(--red)}
+  .dot.y{background:var(--yellow)} .dot.d{background:var(--faint)}
+  .sig{color:var(--dim);font-size:11px}
+  .sig b{color:var(--fg);font-weight:600}
+
+  /* Sparklines in table: inline ASCII-ish bars */
+  .spark{font-family:monospace;color:var(--accent);letter-spacing:0}
+  .spark.dim{color:var(--blue)}
+
+  /* Right column */
+  .detail{padding:8px 10px;font-size:12px;line-height:1.55;border-bottom:1px solid var(--border)}
+  .kv{display:grid;grid-template-columns:9ch 1fr;gap:2px 6px}
+  .kv .k{color:var(--dim)} .kv .v{color:var(--fg);overflow:hidden;text-overflow:ellipsis}
+  .v.ok{color:var(--green)} .v.bad{color:var(--red)} .v.warn{color:var(--yellow)} .v.b{color:var(--blue)}
+
+  .actions{display:flex;flex-wrap:wrap;gap:4px;padding:6px 10px;border-bottom:1px solid var(--border)}
+  .act{padding:1px 7px;border:1px solid var(--border);border-radius:2px;font-size:11px;color:var(--fg)}
+  .act .k{color:var(--accent);margin-right:5px}
+  .act.primary{border-color:var(--green)} .act.primary .k{color:var(--green)}
+  .act.danger{border-color:var(--red)} .act.danger .k{color:var(--red)}
+
+  .timeline{padding:6px 10px;font-size:11px;line-height:1.7;overflow:auto}
+  .timeline .t{color:var(--dim);margin-right:6px}
+  .timeline .ok{color:var(--green)} .timeline .bad{color:var(--red)}
+  .timeline .evt{border-left:2px solid var(--border);padding-left:8px;margin-bottom:4px}
+
+  /* Footer: colored keycap chips + status text */
+  .footer{display:flex;align-items:center;gap:4px;padding:4px 8px;
+    background:var(--panel2);border-top:1px solid var(--border);font-size:11px}
+  .kc{background:#0f1823;border:1px solid var(--border);padding:0 5px;border-radius:2px;
+    color:var(--fg);font-family:inherit}
+  .kc b{color:var(--accent);font-weight:600}
+  .footer .sep{margin:0 8px;color:var(--faint)}
+  .footer .right{margin-left:auto;color:var(--dim)}
+  .footer .right b{color:var(--fg)}
+</style></head><body>
+<div class="app">
+
+  <div class="top">
+    <div class="brand">◆ AP MANAGER</div>
+    <div class="badges">
+      <span class="badge">hotspot <b class="up">●</b> <span style="color:var(--dim)">xap0 · pid 174816</span></span>
+      <span class="badge">captive <b class="dn">○</b> <span style="color:var(--dim)">port 8001</span></span>
+      <span class="badge">clients <b>4</b> <span style="color:var(--dim)">/ max 100</span></span>
+      <span class="badge">uptime <b>02:41:12</b></span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab"><span class="n">1</span>DASHBOARD</div>
+    <div class="tab active"><span class="n">2</span>DEVICES</div>
+    <div class="tab"><span class="n">3</span>HOTSPOT</div>
+    <div class="tab"><span class="n">4</span>CAPTIVE</div>
+    <div class="tab"><span class="n">5</span>INTERFACES</div>
+    <div class="tab"><span class="n">6</span>LOGS</div>
+    <div class="tab" style="margin-left:auto;color:var(--faint)">Ctrl+P palette</div>
+  </div>
+
+  <div class="body">
+    <div class="col">
+      <div class="hdr"><span>CONNECTED DEVICES</span>
+        <span class="counters">total <b>4</b> · auth <b class="ok" style="color:var(--green)">2</b> · blocked <b style="color:var(--red)">1</b> · portal <b style="color:var(--yellow)">1</b></span>
+      </div>
+      <div class="filterbar">
+        <span class="prompt">/</span><span class="input">mac:aa:bb</span><span class="cursor"> </span>
+        <div class="chips">
+          <span class="chip on">auth</span><span class="chip">blocked</span><span class="chip">portal</span>
+          <span class="chip">stale</span>
+        </div>
+      </div>
+      <table>
+        <colgroup><col style="width:12%"><col style="width:18%"><col style="width:7%"><col style="width:9%"><col style="width:14%"><col style="width:11%"><col style="width:8%"><col style="width:10%"><col style="width:11%"></colgroup>
+        <thead><tr>
+          <th>IP</th><th>MAC</th><th>AUTH</th><th>STATE</th><th>HOSTNAME</th><th>VENDOR</th><th>SEEN</th><th>RX</th><th>TX</th>
+        </tr></thead>
+        <tbody>
+          <tr><td class="ip">192.168.100.12</td><td class="mac">AA:BB:CC:DD:EE:01</td>
+            <td><span class="dot g"></span>ok</td><td>active</td><td>phone-1</td><td>Apple</td>
+            <td class="sig"><b>2s</b></td><td><span class="spark">▁▂▃▅▆▇▆▅▄▃</span></td><td><span class="spark dim">▁▁▂▄▆▇▆▄▃▂</span></td></tr>
+          <tr class="sel"><td class="ip">192.168.100.14</td><td class="mac">AA:BB:CC:DD:EE:02</td>
+            <td><span class="dot y"></span>–</td><td>portal</td><td>laptop-7</td><td>Dell</td>
+            <td class="sig"><b>5s</b></td><td><span class="spark">▁▁▂▂▂▁▂▂▁</span></td><td><span class="spark dim">▁▁▁▂▂▁▁▂▁</span></td></tr>
+          <tr><td class="ip">192.168.100.18</td><td class="mac">AA:BB:CC:DD:EE:03</td>
+            <td><span class="dot r"></span>blk</td><td>blocked</td><td>—</td><td>—</td>
+            <td class="sig"><b>18s</b></td><td><span class="spark" style="color:var(--red)">▁▁▁▁▁▁▁▁▁</span></td><td><span class="spark dim">▁▁▁▁▁▁▁▁▁</span></td></tr>
+          <tr><td class="ip">192.168.100.21</td><td class="mac">AA:BB:CC:DD:EE:04</td>
+            <td><span class="dot g"></span>ok</td><td>active</td><td>tv-living</td><td>Samsung</td>
+            <td class="sig"><b>1m</b></td><td><span class="spark">▂▄▆▇█▇▅▃▂▁</span></td><td><span class="spark dim">▁▂▄▆█▇▅▃▂▁</span></td></tr>
+          <tr><td class="ip">192.168.100.27</td><td class="mac">AA:BB:CC:DD:EE:05</td>
+            <td><span class="dot d"></span>–</td><td>stale</td><td>esp32-lab</td><td>Espressif</td>
+            <td class="sig"><b>4m</b></td><td><span class="spark">▁▁▁▁▁▁▁▁▁</span></td><td><span class="spark dim">▁▁▁▁▁▁▁▁▁</span></td></tr>
+        </tbody>
+      </table>
+      <div style="padding:4px 10px;color:var(--faint);font-size:10.5px;border-top:1px solid var(--border);margin-top:auto">
+        backend: FileApi · auth store: <span style="color:var(--dim)">/etc/ap_manager/auth/portal.json</span> · scan 1s · last 19:16:43
+      </div>
+    </div>
+
+    <div class="col" style="background:var(--panel)">
+      <div class="hdr"><span>DEVICE · AA:BB:CC:DD:EE:02</span><span class="counters" style="color:var(--yellow)">PORTAL</span></div>
+      <div class="detail">
+        <div class="kv">
+          <span class="k">IP</span><span class="v b">192.168.100.14</span>
+          <span class="k">Host</span><span class="v">laptop-7</span>
+          <span class="k">Vendor</span><span class="v">Dell Inc.</span>
+          <span class="k">OUI</span><span class="v" style="color:var(--dim)">14:fe:b5</span>
+          <span class="k">Auth</span><span class="v warn">awaiting portal</span>
+          <span class="k">Since</span><span class="v">2026-11-01 19:12:04</span>
+          <span class="k">Seen</span><span class="v">5s ago</span>
+          <span class="k">Lease</span><span class="v" style="color:var(--dim)">192.168.100.14 → 10m</span>
+          <span class="k">Signal</span><span class="v">▂▃▅▆  -58 dBm</span>
+        </div>
+      </div>
+      <div class="actions">
+        <span class="act primary"><span class="k">A</span>authenticate</span>
+        <span class="act danger"><span class="k">B</span>block</span>
+        <span class="act"><span class="k">W</span>webhook</span>
+        <span class="act"><span class="k">D</span>copy mac</span>
+      </div>
+      <div class="hdr" style="border-top:1px solid var(--border)"><span>THROUGHPUT · last 60s</span>
+        <span class="counters">rx <b>2.1 KB/s</b> · tx <b>0.4 KB/s</b></span>
+      </div>
+      <div style="padding:8px 10px;font-size:11px;line-height:1.6">
+        <div style="color:var(--blue);font-family:monospace;white-space:pre"> rx ▁▁▂▂▃▃▄▅▅▆▅▄▄▃▃▂▂▁▂▃▄▅▆▆▅▄▃</div>
+        <div style="color:var(--accent);font-family:monospace;white-space:pre"> tx ▁▁▁▁▂▂▂▃▃▃▄▄▃▃▂▂▁▁▂▂▃▃▃▃▂▂▁</div>
+      </div>
+      <div class="hdr" style="border-top:1px solid var(--border)"><span>EVENTS</span><span class="counters">4</span></div>
+      <div class="timeline">
+        <div class="evt"><span class="t">19:16:31</span><span class="bad">blocked</span> by operator (mac)</div>
+        <div class="evt"><span class="t">19:15:52</span>portal probe</div>
+        <div class="evt"><span class="t">19:12:04</span>dhcp lease acquired</div>
+        <div class="evt"><span class="t">19:11:58</span>joined xap0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="kc"><b>1</b>..<b>6</b></span>screens
+    <span class="sep">│</span>
+    <span class="kc"><b>j</b>/<b>k</b></span>nav
+    <span class="kc"><b>g</b>/<b>G</b></span>top/end
+    <span class="kc"><b>/</b></span>filter
+    <span class="sep">│</span>
+    <span class="kc"><b>A</b></span>auth
+    <span class="kc"><b>B</b></span>block
+    <span class="kc"><b>R</b></span>refresh
+    <span class="sep">│</span>
+    <span class="kc"><b>Ctrl+P</b></span>palette
+    <span class="kc"><b>?</b></span>help
+    <span class="kc"><b>q</b></span>quit
+    <span class="right">last scan <b>19:16:43</b> · FileApi</span>
+  </div>
+</div>
+</body></html>

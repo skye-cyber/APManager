@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>AP Manager · Captive</title>
+<style>
+  :root{
+    --bg:#070a0e; --fg:#cfd8e3; --dim:#5f6d7a; --faint:#2c3742;
+    --accent:#5eead4; --green:#34d399; --blue:#60a5fa; --red:#f87171;
+    --yellow:#fbbf24; --violet:#a78bfa; --panel:#0d1218; --panel2:#111823;
+    --border:#1f2937; --sel:#133347;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"Berkeley Mono","JetBrains Mono",ui-monospace,monospace;font-size:12.5px;overflow:hidden}
+  .app{display:grid;grid-template-rows:auto auto 1fr auto;height:100%}
+  .top{display:flex;justify-content:space-between;align-items:center;
+    padding:4px 10px;background:linear-gradient(180deg,#0d1218,#0a0e13);
+    border-bottom:1px solid var(--border);font-size:11px}
+  .top .brand{color:var(--accent);letter-spacing:.18em;font-weight:600}
+  .top .badges{display:flex;gap:14px;color:var(--dim)}
+  .badge b{color:var(--fg);font-weight:600}
+  .badge .up{color:var(--green)} .badge .dn{color:var(--red)}
+  .tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);padding:0 6px}
+  .tab{padding:5px 14px;color:var(--dim);font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel2)}
+  .tab .n{color:var(--faint);margin-right:6px}
+
+  .body{display:grid;grid-template-columns:1fr 1.2fr;gap:1px;background:var(--border);min-height:0}
+  .col{display:flex;flex-direction:column;background:var(--bg);min-height:0;min-width:0;overflow:hidden}
+  .hdr{display:flex;justify-content:space-between;align-items:center;padding:3px 10px;
+    background:var(--panel2);border-bottom:1px solid var(--border);
+    font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:600}
+  .hdr .meta{color:var(--dim);letter-spacing:.04em;font-weight:400}
+  .hdr .meta b{color:var(--fg)}
+
+  /* Portal status card */
+  .portal{padding:12px 14px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--border)}
+  .portal .row{display:flex;align-items:center;gap:12px}
+  .portal .big{font-size:15px;font-weight:600}
+  .portal .big.on{color:var(--green)} .portal .big.off{color:var(--red)}
+  .portal .dotbig{width:12px;height:12px;border-radius:50%}
+  .portal .dotbig.on{background:var(--green);box-shadow:0 0 10px var(--green)}
+  .portal .dotbig.off{background:var(--red);box-shadow:0 0 10px var(--red)}
+  .portal .kv{display:grid;grid-template-columns:16ch 1fr;gap:3px 8px;font-size:12px}
+  .portal .kv .k{color:var(--dim)} .portal .kv .v{color:var(--fg)}
+  .portal .kv .v.mono{color:var(--blue)} .portal .kv .v.dim{color:var(--dim)}
+  .portal .kv .v.warn{color:var(--yellow)}
+
+  .authstats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)}
+  .stat{background:var(--bg);padding:8px 12px}
+  .stat .lbl{color:var(--dim);font-size:10px;letter-spacing:.1em}
+  .stat .val{font-size:18px;font-weight:600;color:var(--fg)}
+  .stat .val.g{color:var(--green)} .stat .val.y{color:var(--yellow)} .stat .val.r{color:var(--red)}
+  .stat .sub{color:var(--dim);font-size:10.5px}
+
+  /* VPN table */
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th,td{text-align:left;padding:4px 10px;border-bottom:1px solid #141b23;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+  th{color:var(--dim);font-weight:500;font-size:10.5px;letter-spacing:.08em;background:var(--panel);position:sticky;top:0}
+  tbody tr.sel{background:var(--sel)}
+  tbody tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+  td.iface{color:var(--blue)}
+  td.ip{color:var(--dim);font-size:11px}
+
+  /* 3-state selector */
+  .tristate{display:inline-flex;border:1px solid var(--border);border-radius:2px;overflow:hidden}
+  .tristate span{padding:1px 8px;font-size:11px;color:var(--dim);border-right:1px solid var(--border)}
+  .tristate span:last-child{border-right:none}
+  .tristate span.on.allow{background:rgba(52,211,153,.15);color:var(--green)}
+  .tristate span.on.block{background:rgba(248,113,113,.15);color:var(--red)}
+  .tristate span.on.neutral{background:rgba(95,109,122,.15);color:var(--fg)}
+
+  .actions{display:flex;gap:8px;padding:6px 10px;border-top:1px solid var(--border);
+    background:var(--panel2);flex-wrap:wrap;align-items:center}
+  .act{padding:2px 9px;border:1px solid var(--border);border-radius:2px;font-size:11.5px;color:var(--fg)}
+  .act .k{color:var(--accent);margin-right:5px}
+  .act.primary{border-color:var(--green)} .act.primary .k{color:var(--green)}
+  .act.danger{border-color:var(--red)} .act.danger .k{color:var(--red)}
+
+  .footer{display:flex;align-items:center;gap:4px;padding:4px 8px;
+    background:var(--panel2);border-top:1px solid var(--border);font-size:11px}
+  .kc{background:#0f1823;border:1px solid var(--border);padding:0 5px;border-radius:2px}
+  .kc b{color:var(--accent);font-weight:600}
+  .footer .sep{margin:0 8px;color:var(--faint)}
+  .footer .right{margin-left:auto;color:var(--dim)}
+  .footer .right b{color:var(--fg)}
+</style></head><body>
+<div class="app">
+  <div class="top">
+    <div class="brand">◆ AP MANAGER</div>
+    <div class="badges">
+      <span class="badge">hotspot <b class="up">●</b> <span style="color:var(--dim)">xap0 · pid 174816</span></span>
+      <span class="badge">captive <b class="dn">○</b> <span style="color:var(--dim)">port 8001</span></span>
+      <span class="badge">clients <b>4</b> <span style="color:var(--dim)">/ max 100</span></span>
+      <span class="badge">uptime <b>02:41:12</b></span>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab"><span class="n">1</span>DASHBOARD</div>
+    <div class="tab"><span class="n">2</span>DEVICES</div>
+    <div class="tab"><span class="n">3</span>HOTSPOT</div>
+    <div class="tab active"><span class="n">4</span>CAPTIVE</div>
+    <div class="tab"><span class="n">5</span>INTERFACES</div>
+    <div class="tab"><span class="n">6</span>LOGS</div>
+    <div class="tab" style="margin-left:auto;color:var(--faint)">Ctrl+P palette</div>
+  </div>
+
+  <div class="body">
+    <div class="col">
+      <div class="hdr"><span>CAPTIVE PORTAL</span><span class="meta">black box · frontend in flux</span></div>
+      <div class="portal">
+        <div class="row">
+          <span class="dotbig off"></span>
+          <span class="big off">STOPPED</span>
+          <span style="margin-left:auto;color:var(--dim);font-size:11px">last changed 19:16:41</span>
+        </div>
+        <div class="kv">
+          <span class="k">port</span><span class="v mono">8001</span>
+          <span class="k">firewall chain</span><span class="v mono">CAPTIVE_PORTAL</span>
+          <span class="k">nat rules</span><span class="v">0 active</span>
+          <span class="k">mac rules</span><span class="v">0 auth · 0 blocked</span>
+          <span class="k">redirect target</span><span class="v mono">http://192.168.100.1:8001/</span>
+          <span class="k">frontend</span><span class="v warn">rebuilding (was Django)</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:2px">
+          <span class="act primary"><span class="k">E</span>enable captive</span>
+          <span class="act"><span class="k">R</span>restart portal</span>
+          <span class="act"><span class="k">O</span>open in browser</span>
+        </div>
+      </div>
+      <div class="authstats">
+        <div class="stat"><div class="lbl">AUTHENTICATED</div><div class="val g">2</div><div class="sub">of 4 connected</div></div>
+        <div class="stat"><div class="lbl">BLOCKED</div><div class="val r">1</div><div class="sub">mac filter</div></div>
+        <div class="stat"><div class="lbl">PENDING PORTAL</div><div class="val y">1</div><div class="sub">awaiting click</div></div>
+      </div>
+      <div class="hdr" style="border-top:1px solid var(--border)"><span>RECENT AUTH EVENTS</span><span class="meta">tail</span></div>
+      <div style="overflow:auto;flex:1">
+        <div style="display:flex;gap:10px;padding:5px 10px;border-bottom:1px solid #141b23;font-size:11.5px">
+          <span style="color:var(--dim);min-width:9ch">19:16:31</span>
+          <span style="color:var(--red);min-width:6ch;font-weight:600">block</span>
+          <span>AA:BB:CC:DD:EE:03 · by operator</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:5px 10px;border-bottom:1px solid #141b23;font-size:11.5px">
+          <span style="color:var(--dim);min-width:9ch">19:12:04</span>
+          <span style="color:var(--green);min-width:6ch;font-weight:600">auth</span>
+          <span>AA:BB:CC:DD:EE:01 · phone-1 · portal click</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:5px 10px;border-bottom:1px solid #141b23;font-size:11.5px">
+          <span style="color:var(--dim);min-width:9ch">19:11:58</span>
+          <span style="color:var(--yellow);min-width:6ch;font-weight:600">fail</span>
+          <span>AA:BB:CC:DD:EE:03 · wrong passphrase</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:5px 10px;border-bottom:1px solid #141b23;font-size:11.5px">
+          <span style="color:var(--dim);min-width:9ch">19:10:22</span>
+          <span style="color:var(--blue);min-width:6ch;font-weight:600">probe</span>
+          <span>AA:BB:CC:DD:EE:02 · laptop-7 · portal detected</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:5px 10px;border-bottom:1px solid #141b23;font-size:11.5px">
+          <span style="color:var(--dim);min-width:9ch">19:09:47</span>
+          <span style="color:var(--green);min-width:6ch;font-weight:600">auth</span>
+          <span>AA:BB:CC:DD:EE:04 · tablet-2 · portal click</span>
+        </div>
+        <div style="display:flex;gap:10px;padding:5px 10px;border-bottom:1px solid #141b23;font-size:11.5px">
+          <span style="color:var(--dim);min-width:9ch">19:08:03</span>
+          <span style="color:var(--red);min-width:6ch;font-weight:600">block</span>
+          <span>AA:BB:CC:DD:EE:05 · unknown-device · mac filter</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: VPN control -->
+    <div class="col">
+      <div class="hdr"><span>VPN CONTROL · per-interface 3-state</span>
+        <span class="meta">policy: <b>allow</b> / neutral / <b>block</b></span></div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:16ch">iface</th>
+            <th style="width:16ch">ip</th>
+            <th style="width:10ch">state</th>
+            <th>policy</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="sel">
+            <td class="iface">wg-US-FREE-85</td>
+            <td class="ip">10.66.0.2</td>
+            <td style="color:var(--green)">up</td>
+            <td>
+              <span class="tristate">
+                <span class="on allow">allow</span><span>neutral</span><span>block</span>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="iface">wg-DE-01</td>
+            <td class="ip">10.66.1.2</td>
+            <td style="color:var(--green)">up</td>
+            <td>
+              <span class="tristate">
+                <span>allow</span><span class="on neutral">neutral</span><span>block</span>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="iface">wg-UK-02</td>
+            <td class="ip">10.66.2.2</td>
+            <td style="color:var(--dim)">down</td>
+            <td>
+              <span class="tristate">
+                <span>allow</span><span>neutral</span><span class="on block">block</span>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td class="iface">wg-JP-03</td>
+            <td class="ip">—</td>
+            <td style="color:var(--red)">error</td>
+            <td>
+              <span class="tristate">
+                <span>allow</span><span class="on neutral">neutral</span><span>block</span>
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="hdr" style="border-top:1px solid var(--border)"><span>SELECTED · wg-US-FREE-85</span>
+        <span class="meta">latency <b>42 ms</b> · handshake <b>18s ago</b></span></div>
+      <div style="padding:8px 12px;font-family:monospace;font-size:11px;line-height:1.7;overflow:auto;flex:1;color:var(--dim)">
+        <div><span style="color:var(--violet)">peer</span>       <span style="color:var(--fg)">203.0.113.42:51820</span></div>
+        <div><span style="color:var(--violet)">allowed</span>     <span style="color:var(--fg)">0.0.0.0/0, ::/0</span></div>
+        <div><span style="color:var(--violet)">rx/tx</span>       <span style="color:var(--blue)">12.4 MB</span> / <span style="color:var(--accent)">3.1 MB</span></div>
+        <div><span style="color:var(--violet)">latest</span>      <span style="color:var(--green)">handshake ok</span></div>
+        <div><span style="color:var(--violet)">kill-switch</span>  <span style="color:var(--green)">on</span></div>
+        <div style="margin-top:6px;color:var(--yellow)"># changing policy requires confirmation — applies to new flows only</div>
+      </div>
+
+      <div class="actions">
+        <span class="act"><span class="k">↑↓</span>select iface</span>
+        <span class="act"><span class="k">←→</span>change policy</span>
+        <span class="act primary"><span class="k">↵</span>confirm change</span>
+        <span class="act"><span class="k">P</span>portal screen</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="kc"><b>1</b>..<b>6</b></span>screens
+    <span class="sep">│</span>
+    <span class="kc"><b>E</b></span>enable
+    <span class="kc"><b>R</b></span>restart portal
+    <span class="kc"><b>←→</b></span>vpn policy
+    <span class="sep">│</span>
+    <span class="kc"><b>Ctrl+P</b></span>palette
+    <span class="kc"><b>q</b></span>quit
+    <span class="right">captive <b style="color:var(--red)">stopped</b> · vpn <b>3 up · 1 err</b></span>
+  </div>
+</div>
+</body></html>

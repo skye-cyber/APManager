@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>AP Manager · Logs</title>
+<style>
+  :root{
+    --bg:#070a0e; --fg:#cfd8e3; --dim:#5f6d7a; --faint:#2c3742;
+    --accent:#5eead4; --green:#34d399; --blue:#60a5fa; --red:#f87171;
+    --yellow:#fbbf24; --violet:#a78bfa; --panel:#0d1218; --panel2:#111823;
+    --border:#1f2937; --sel:#133347;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"Berkeley Mono","JetBrains Mono",ui-monospace,monospace;font-size:12.5px;overflow:hidden}
+  .app{display:grid;grid-template-rows:auto auto auto 1fr auto;height:100%}
+  .top{display:flex;justify-content:space-between;align-items:center;
+    padding:4px 10px;background:linear-gradient(180deg,#0d1218,#0a0e13);
+    border-bottom:1px solid var(--border);font-size:11px}
+  .top .brand{color:var(--accent);letter-spacing:.18em;font-weight:600}
+  .top .badges{display:flex;gap:14px;color:var(--dim)}
+  .badge b{color:var(--fg);font-weight:600}
+  .badge .up{color:var(--green)} .badge .dn{color:var(--red)}
+  .tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);padding:0 6px}
+  .tab{padding:5px 14px;color:var(--dim);font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel2)}
+  .tab .n{color:var(--faint);margin-right:6px}
+
+  /* filter chips */
+  .chips{display:flex;gap:8px;padding:5px 10px;background:var(--panel2);
+    border-bottom:1px solid var(--border);font-size:11px;flex-wrap:wrap;align-items:center}
+  .chips .lbl{color:var(--dim);letter-spacing:.08em;font-size:10px;margin-right:2px}
+  .chip{padding:1px 8px;border:1px solid var(--border);border-radius:2px;color:var(--dim)}
+  .chip.on{background:#0f1823;color:var(--fg);border-color:var(--accent)}
+  .chip .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+  .chip .dot.hostapd{background:var(--violet)} .chip .dot.dnsmasq{background:var(--blue)}
+  .chip .dot.captive{background:var(--green)} .chip .dot.kernel{background:var(--yellow)}
+  .chip .dot.auth{background:var(--red)}
+  .sepv{width:1px;height:14px;background:var(--border);margin:0 6px}
+
+  .logwrap{overflow:auto;min-height:0;font-size:11.5px;line-height:1.6}
+  .log{display:grid;grid-template-columns:9ch 8ch 1fr;gap:10px;padding:1px 10px;
+    border-bottom:1px solid transparent;white-space:pre-wrap;word-break:break-word}
+  .log:hover{background:#0b1118}
+  .log .t{color:var(--dim)}
+  .log .src{font-weight:600}
+  .log .src.hostapd{color:var(--violet)} .log .src.dnsmasq{color:var(--blue)}
+  .log .src.captive{color:var(--green)} .log .src.kernel{color:var(--yellow)}
+  .log .src.auth{color:var(--red)}
+  .log .m{color:var(--fg)}
+  .log.warn .m{color:var(--yellow)}
+  .log.err .m{color:var(--red)}
+  .log.dim .m{color:var(--dim)}
+
+  .footer{display:flex;align-items:center;gap:4px;padding:4px 8px;
+    background:var(--panel2);border-top:1px solid var(--border);font-size:11px}
+  .kc{background:#0f1823;border:1px solid var(--border);padding:0 5px;border-radius:2px}
+  .kc b{color:var(--accent);font-weight:600}
+  .footer .sep{margin:0 8px;color:var(--faint)}
+  .footer .right{margin-left:auto;color:var(--dim)}
+  .footer .right b{color:var(--fg)}
+</style></head><body>
+<div class="app">
+  <div class="top">
+    <div class="brand">◆ AP MANAGER</div>
+    <div class="badges">
+      <span class="badge">hotspot <b class="up">●</b> <span style="color:var(--dim)">xap0 · pid 174816</span></span>
+      <span class="badge">captive <b class="dn">○</b> <span style="color:var(--dim)">port 8001</span></span>
+      <span class="badge">clients <b>4</b> <span style="color:var(--dim)">/ max 100</span></span>
+      <span class="badge">uptime <b>02:41:12</b></span>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab"><span class="n">1</span>DASHBOARD</div>
+    <div class="tab"><span class="n">2</span>DEVICES</div>
+    <div class="tab"><span class="n">3</span>HOTSPOT</div>
+    <div class="tab"><span class="n">4</span>CAPTIVE</div>
+    <div class="tab"><span class="n">5</span>INTERFACES</div>
+    <div class="tab active"><span class="n">6</span>LOGS</div>
+    <div class="tab" style="margin-left:auto;color:var(--faint)">Ctrl+P palette</div>
+  </div>
+
+  <div class="chips">
+    <span class="lbl">SOURCE</span>
+    <span class="chip on"><span class="dot hostapd"></span>hostapd</span>
+    <span class="chip on"><span class="dot dnsmasq"></span>dnsmasq</span>
+    <span class="chip on"><span class="dot captive"></span>captive</span>
+    <span class="chip"><span class="dot kernel"></span>kernel</span>
+    <span class="chip on"><span class="dot auth"></span>auth</span>
+    <span class="sepv"></span>
+    <span class="lbl">SEVERITY</span>
+    <span class="chip on">all</span>
+    <span class="chip">err</span>
+    <span class="chip">warn</span>
+    <span class="chip">info</span>
+    <span class="sepv"></span>
+    <span class="chip">follow</span>
+    <span class="chip">pause</span>
+  </div>
+
+  <div class="logwrap">
+    <div class="log"><span class="t">19:16:42</span><span class="src dnsmasq">dnsmasq</span><span class="m">started, version 2.90 · cachesize 150 · leasefile=/var/lib/misc/dnsmasq.leases</span></div>
+    <div class="log"><span class="t">19:16:41</span><span class="src hostapd">hostapd</span><span class="m">xap0: interface state UNINITIALIZED→ENABLED</span></div>
+    <div class="log"><span class="t">19:16:41</span><span class="src hostapd">hostapd</span><span class="m">xap0: AP-ENABLED · ssid=FreeWiFi-KE · ch=10 · hw_mode=g · ieee80211n=1</span></div>
+    <div class="log"><span class="t">19:16:31</span><span class="src auth">auth</span><span class="m warn">block AA:BB:CC:DD:EE:03 by operator</span></div>
+    <div class="log"><span class="t">19:15:52</span><span class="src captive">captive</span><span class="m">portal probe from AA:BB:CC:DD:EE:02 (laptop-7)</span></div>
+    <div class="log"><span class="t">19:15:03</span><span class="src hostapd">hostapd</span><span class="m warn">channel changed 2 → 10 · reconfiguring</span></div>
+    <div class="log"><span class="t">19:14:58</span><span class="src hostapd">hostapd</span><span class="m">xap0: STA aa:bb:cc:dd:ee:01 IEEE 802.11: associated</span></div>
+        <div class="log"><span class="t">19:12:04</span><span class="src dnsmasq">dnsmasq</span><span class="m">DHCPACK(xap0) 192.168.100.24 aa:bb:cc:dd:ee:01 phone-1</span></div>
+        <div class="log"><span class="t">19:11:58</span><span class="src auth">auth</span><span class="m err">fail AA:BB:CC:DD:EE:03 · wrong passphrase (attempt 1/3)</span></div>
+        <div class="log"><span class="t">19:11:55</span><span class="src captive">captive</span><span class="m">passphrase submitted for AA:BB:CC:DD:EE:03 (unknown-device)</span></div>
+        <div class="log"><span class="t">19:11:40</span><span class="src hostapd">hostapd</span><span class="m">xap0: STA aa:bb:cc:dd:ee:03 IEEE 802.11: associated</span></div>
+        <div class="log"><span class="t">19:10:22</span><span class="src captive">captive</span><span class="m">portal probe from AA:BB:CC:DD:EE:02 (laptop-7) · redirect 302</span></div>
+        <div class="log"><span class="t">19:10:18</span><span class="src dnsmasq">dnsmasq</span><span class="m">DHCPDISCOVER(xap0) aa:bb:cc:dd:ee:02</span></div>
+        <div class="log"><span class="t">19:09:47</span><span class="src auth">auth</span><span class="m">auth AA:BB:CC:DD:EE:04 tablet-2 · portal click · session 4f2a</span></div>
+        <div class="log"><span class="t">19:09:12</span><span class="src kernel">kernel</span><span class="m dim">xap0: link becomes ready</span></div>
+        <div class="log"><span class="t">19:08:03</span><span class="src auth">auth</span><span class="m warn">block AA:BB:CC:DD:EE:05 unknown-device · mac filter</span></div>
+        <div class="log"><span class="t">19:07:44</span><span class="src hostapd">hostapd</span><span class="m warn">xap0: STA aa:bb:cc:dd:ee:05 denied · not in allow list</span></div>
+        <div class="log"><span class="t">19:06:30</span><span class="src captive">captive</span><span class="m">portal listening on 0.0.0.0:8001 · template=default</span></div>
+      </div>
+    </div>
+
+  <div class="footer">
+    <span class="kc"><b>1</b>..<b>6</b></span>screens
+    <span class="sep">│</span>
+    <span class="kc"><b>j</b>/<b>k</b></span>scroll
+    <span class="kc"><b>f</b></span>follow
+    <span class="kc"><b>s</b></span>source filter
+    <span class="kc"><b>/</b></span>search
+    <span class="sep">│</span>
+    <span class="kc"><b>Ctrl+P</b></span>palette
+    <span class="kc"><b>q</b></span>quit
+    <span class="right">showing <b>12</b> / 1,204 lines · <b style="color:var(--green)">live</b></span>
+  </div>
+</div>
+</body></html>

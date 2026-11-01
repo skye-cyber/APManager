@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>AP Manager · Dashboard</title>
+<style>
+  :root{
+    --bg:#070a0e; --fg:#cfd8e3; --dim:#5f6d7a; --faint:#2c3742;
+    --accent:#5eead4; --green:#34d399; --blue:#60a5fa; --red:#f87171;
+    --yellow:#fbbf24; --violet:#a78bfa; --panel:#0d1218; --panel2:#111823;
+    --border:#1f2937; --sel:#133347;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font-family:"Berkeley Mono","JetBrains Mono",ui-monospace,monospace;font-size:12.5px;overflow:hidden}
+  /* Changed grid rows to accommodate the new strip: top, tabs, verdict, body, bottom-bar, footer */
+  .app{display:grid;grid-template-rows:auto auto auto 1fr auto auto;height:100%}
+  .top{display:flex;justify-content:space-between;align-items:center;
+    padding:4px 10px;background:linear-gradient(180deg,#0d1218,#0a0e13);
+    border-bottom:1px solid var(--border);font-size:11px}
+  .top .brand{color:var(--accent);letter-spacing:.18em;font-weight:600}
+  .top .badges{display:flex;gap:14px;color:var(--dim)}
+  .badge b{color:var(--fg);font-weight:600}
+  .badge .up{color:var(--green)} .badge .dn{color:var(--red)}
+  .tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border);padding:0 6px}
+  .tab{padding:5px 14px;color:var(--dim);font-size:11px;letter-spacing:.08em;border-bottom:2px solid transparent}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);background:var(--panel2)}
+  .tab .n{color:var(--faint);margin-right:6px}
+
+  /* VERDICT STRIP (Yellow Title restored) */
+  .verdict{display:flex;align-items:center;gap:0;background:var(--panel2);
+    border-bottom:1px solid var(--border);font-size:11.5px}
+  .verdict .lead{padding:6px 12px;font-weight:600;letter-spacing:.1em;
+    background:#0f1823;border-right:1px solid var(--border);color:var(--yellow)}
+  .verdict .seg{display:flex;align-items:center;gap:6px;padding:6px 14px;
+    border-right:1px solid var(--border);color:var(--dim)}
+  .verdict .seg b{color:var(--fg);font-weight:600}
+  .verdict .seg .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .dot.g{background:var(--green)} .dot.r{background:var(--red)}
+  .dot.y{background:var(--yellow)} .dot.d{background:var(--faint)}
+  .verdict .spacer{flex:1}
+  .verdict .thru{padding:6px 14px;color:var(--dim);font-size:10.5px}
+  .verdict .thru b{color:var(--blue)}
+
+  .body{display:grid;grid-template-columns:1fr minmax(30ch,38ch);gap:1px;
+    background:var(--border);min-height:0}
+  .col{background:var(--bg);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+
+  .hdr{display:flex;justify-content:space-between;align-items:center;padding:3px 10px;
+    background:var(--panel2);border-bottom:1px solid var(--border);
+    font-size:10.5px;letter-spacing:.12em;color:var(--accent);font-weight:600}
+  .hdr .meta{color:var(--dim);letter-spacing:.04em;font-weight:400}
+  .hdr .meta b{color:var(--fg)}
+  .hdr .meta .red{color:var(--red)}
+
+  /* ACTIVE ALERTS */
+  .alerts{flex:0 0 auto;max-height:35%}
+  .arow{display:grid;grid-template-columns:2ch 14ch 1fr 12ch;gap:10px;
+    padding:6px 10px;border-bottom:1px solid #141b23;font-size:12px;align-items:center;cursor:pointer}
+  .arow.sel{background:var(--sel);box-shadow:inset 2px 0 0 var(--accent)}
+  .arow .ico{font-weight:600}
+  .arow.sev-err .ico{color:var(--red)} .arow.sev-warn .ico{color:var(--yellow)}
+  .arow .what{color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .arow .what .sub{color:var(--dim);font-size:10.5px;margin-left:4px}
+  .arow .fix{color:var(--dim);font-size:10.5px;text-align:right}
+  .arow .fix .k{background:#0f1823;border:1px solid var(--border);
+    padding:0 4px;border-radius:2px;color:var(--accent);font-weight:600}
+
+  /* CENTER: SPLIT STATS & TEXT GRAPH */
+  .center-split{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);min-height:0}
+
+  /* Live Stats (Textual) */
+  .live-stats{background:var(--bg);padding:8px 12px;display:flex;flex-direction:column;justify-content:center;overflow:auto}
+  .stat-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dotted var(--faint);font-size:11.5px}
+  .stat-row:last-child{border-bottom:none}
+  .stat-row .k{color:var(--dim)}
+  .stat-row .v{color:var(--fg);font-weight:600}
+  .stat-row .v.g{color:var(--green)} .stat-row .v.y{color:var(--yellow)}
+  .stat-row .v.r{color:var(--red)} .stat-row .v.b{color:var(--blue)}
+
+  /* Textual Graph */
+  .text-graph{background:var(--bg);padding:8px 12px;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .graph-row{display:flex;align-items:flex-end;gap:2px;height:80px;margin-bottom:4px}
+  .bar{flex:1;background:var(--blue);border-radius:1px 1px 0 0;min-height:2px;opacity:0.8;transition:height 0.2s}
+  .bar.tx{background:var(--accent)}
+  .graph-labels{display:flex;justify-content:space-between;color:var(--dim);font-size:10px}
+  .graph-legend{display:flex;gap:10px;font-size:10.5px;margin-top:8px;color:var(--dim);justify-content:center}
+  .graph-legend .l-rx{color:var(--blue)} .graph-legend .l-tx{color:var(--accent)}
+
+  /* BOTTOM THRU BAR */
+  .thru-bar{display:flex;justify-content:space-between;align-items:center;
+    background:var(--panel2);border-top:1px solid var(--border);padding:6px 12px;font-size:11.5px}
+  .thru-bar .lbl{color:var(--dim);letter-spacing:.08em;font-size:10px}
+  .thru-bar .val{color:var(--blue);font-weight:600;font-size:13px}
+  .thru-bar .val.tx{color:var(--accent)}
+  .thru-bar .up{color:var(--green);font-weight:600;margin-left:12px}
+
+  /* RECENT EVENTS (Right) */
+  .events{overflow:auto;flex:1;min-height:0}
+  .ev{display:grid;grid-template-columns:8ch 6ch 1fr;gap:8px;padding:4px 10px;
+    border-bottom:1px solid #141b23;font-size:11px;align-items:start}
+  .ev .t{color:var(--dim);font-size:10.5px}
+  .ev .sev{font-weight:600;font-size:10.5px}
+  .ev .sev.auth{color:var(--green)} .ev .sev.fail{color:var(--yellow)}
+  .ev .sev.block{color:var(--red)} .ev .sev.probe{color:var(--blue)}
+  .ev .sev.info{color:var(--dim)} .ev .sev.warn{color:var(--yellow)}
+  .ev .m{color:var(--fg);white-space:pre-wrap;word-break:break-word}
+
+  .footer{display:flex;align-items:center;gap:4px;padding:4px 8px;
+    background:var(--panel2);border-top:1px solid var(--border);font-size:11px}
+  .kc{background:#0f1823;border:1px solid var(--border);padding:0 5px;border-radius:2px}
+  .kc b{color:var(--accent);font-weight:600}
+  .footer .sep{margin:0 8px;color:var(--faint)}
+  .footer .right{margin-left:auto;color:var(--dim)}
+  .footer .right b{color:var(--fg)}
+</style></head><body>
+<div class="app">
+  <div class="top">
+    <div class="brand">◆ AP MANAGER</div>
+    <div class="badges">
+      <span class="badge">hotspot <b class="up">●</b> <span style="color:var(--dim)">xap0 · pid 174816</span></span>
+      <span class="badge">captive <b class="dn">○</b> <span style="color:var(--dim)">port 8001</span></span>
+      <span class="badge">clients <b>4</b> <span style="color:var(--dim)">/ max 100</span></span>
+      <span class="badge">uptime <b>02:41:12</b></span>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active"><span class="n">1</span>DASHBOARD</div>
+    <div class="tab"><span class="n">2</span>DEVICES</div>
+    <div class="tab"><span class="n">3</span>HOTSPOT</div>
+    <div class="tab"><span class="n">4</span>CAPTIVE</div>
+    <div class="tab"><span class="n">5</span>INTERFACES</div>
+    <div class="tab"><span class="n">6</span>LOGS</div>
+    <div class="tab" style="margin-left:auto;color:var(--faint)">Ctrl+P palette</div>
+  </div>
+
+  <!-- RESTORED VERDICT STRIP -->
+  <div class="verdict">
+    <span class="lead">ATTENTION · 2 items</span>
+    <span class="seg"><span class="dot r"></span>VPN <b>1 err</b></span>
+    <span class="seg"><span class="dot y"></span>captive <b>stopped</b></span>
+    <span class="seg"><span class="dot g"></span>hotspot <b>up</b></span>
+    <span class="seg"><span class="dot g"></span>clients <b>4/100</b></span>
+    <span class="spacer"></span>
+    <span class="thru">thru <b>12.1M</b> rx / <b>5.4M</b> tx · wlo1</span>
+  </div>
+
+  <div class="body">
+    <!-- LEFT COLUMN: ALERTS & CENTER -->
+    <div class="col">
+      <!-- CENTER SPLIT: Stats & Text Graph -->
+      <div class="center-split">
+        <!-- Live Stats -->
+        <div class="live-stats">
+          <div class="stat-row"><span class="k">CPU Load</span><span class="v">0.14, 0.08, 0.05</span></div>
+          <div class="stat-row"><span class="k">Memory</span><span class="v">412M / 1.9G <span style="color:var(--dim);font-size:10px">(21%)</span></span></div>
+          <div class="stat-row"><span class="k">Temp</span><span class="v g">42°C</span></div>
+          <div class="stat-row"><span class="k">rx errs</span><span class="v r">12</span></div>
+          <div class="stat-row"><span class="k">tx drops</span><span class="v y">4</span></div>
+          <div class="stat-row"><span class="k">active conns</span><span class="v b">28</span></div>
+        </div>
+
+        <!-- Textual Graph -->
+        <div class="text-graph">
+          <div style="font-size:10px;color:var(--dim);margin-bottom:4px">THROUGHPUT (last 30s)</div>
+          <div class="graph-row">
+            <!-- Mocked bars -->
+            <div class="bar" style="height:25%"></div>
+            <div class="bar" style="height:40%"></div>
+            <div class="bar" style="height:35%"></div>
+            <div class="bar" style="height:60%"></div>
+            <div class="bar" style="height:55%"></div>
+            <div class="bar" style="height:80%"></div>
+            <div class="bar" style="height:70%"></div>
+            <div class="bar" style="height:90%"></div>
+            <div class="bar" style="height:65%"></div>
+            <div class="bar" style="height:45%"></div>
+            <div class="bar" style="height:30%"></div>
+            <div class="bar" style="height:20%"></div>
+          </div>
+          <div class="graph-row" style="height:40px;margin-bottom:0">
+            <div class="bar tx" style="height:15%"></div>
+            <div class="bar tx" style="height:25%"></div>
+            <div class="bar tx" style="height:20%"></div>
+            <div class="bar tx" style="height:35%"></div>
+            <div class="bar tx" style="height:40%"></div>
+            <div class="bar tx" style="height:50%"></div>
+            <div class="bar tx" style="height:45%"></div>
+            <div class="bar tx" style="height:60%"></div>
+            <div class="bar tx" style="height:55%"></div>
+            <div class="bar tx" style="height:30%"></div>
+            <div class="bar tx" style="height:20%"></div>
+            <div class="bar tx" style="height:10%"></div>
+          </div>
+          <div class="graph-labels"><span>-30s</span><span>-15s</span><span>now</span></div>
+          <div class="graph-legend">
+            <span class="l-rx">■ rx</span>
+            <span class="l-tx">■ tx</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: RECENT EVENTS -->
+    <div class="col">
+      <div class="hdr"><span>RECENT EVENTS</span>
+        <span class="meta"><b>6</b> · live</span></div>
+      <div class="events">
+        <div class="ev"><span class="t">19:16:31</span><span class="sev block">block</span><span class="m">AA:BB:CC:DD:EE:03 · by operator</span></div>
+        <div class="ev"><span class="t">19:12:04</span><span class="sev auth">auth</span><span class="m">AA:BB:CC:DD:EE:01 · phone-1 · portal click</span></div>
+        <div class="ev"><span class="t">19:11:58</span><span class="sev fail">fail</span><span class="m">AA:BB:CC:DD:EE:03 · wrong passphrase</span></div>
+        <div class="ev"><span class="t">19:10:22</span><span class="sev probe">probe</span><span class="m">AA:BB:CC:DD:EE:02 · laptop-7 · portal detected</span></div>
+        <div class="ev"><span class="t">19:09:47</span><span class="sev auth">auth</span><span class="m">AA:BB:CC:DD:EE:04 · tablet-2 · portal click</span></div>
+        <div class="ev"><span class="t">19:08:03</span><span class="sev block">block</span><span class="m">AA:BB:CC:DD:EE:05 · unknown-device · mac filter</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: RX/TX BAR -->
+  <div class="thru-bar">
+    <div><span class="lbl">RX</span> <span class="val">12.1 MB/s</span></div>
+    <div><span class="lbl">TX</span> <span class="val tx">5.4 MB/s</span></div>
+    <div class="up">● wlo1 up</div>
+  </div>
+
+  <div class="footer">
+    <span class="kc"><b>1</b>..<b>6</b></span>screens
+    <span class="sep">│</span>
+    <span class="kc"><b>j</b>/<b>k</b></span>select
+    <span class="kc"><b>↵</b></span>open
+    <span class="kc"><b>R</b></span>restart portal
+    <span class="sep">│</span>
+    <span class="kc"><b>Ctrl+P</b></span>palette
+    <span class="kc"><b>q</b></span>quit
+    <span class="right">dash <b>live</b> · <b style="color:var(--red)">2</b> alerts</span>
+  </div>
+</div>
+</body></html>

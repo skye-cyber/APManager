@@ -47,7 +47,7 @@ def hotspot():
 @click.option(
     "--no-setup",
     is_flag=True,
-    help="Skip interface setup-- only starts services",
+    help="Skip interface setup only starts services",
 )
 @click.pass_context
 def hotspot_start(
