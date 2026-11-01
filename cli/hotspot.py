@@ -6,13 +6,18 @@ from rich.console import Console
 from rich.prompt import Confirm
 from rich.panel import Panel
 from rich.table import Table
-import daemon as daemonizer
+
+# import daemon as daemonizer
 from shared import cli
 from ap import APManagerCLI
+from utils.startfns import statsFn, sysExFn
 
 console = Console()
 
 version = "1.0.3"
+
+global startup_retries
+startup_retries = 0
 
 
 @cli.group()
@@ -73,6 +78,7 @@ def hotspot_start(
         "daemon": daemon,
     }
     cli_obj.update_config(**updates)
+    global startup_retries
 
     # Show progress
     with Progress(
@@ -89,11 +95,22 @@ def hotspot_start(
                 if desc:
                     return progress.update(task, description=desc)
 
-            success = cli_obj.manager.setup_accesspoint(
-                progress_fn=progress_callback,
-                no_services=no_services,
-                no_setup=no_setup,
-            )
+            def start_fn():
+                return cli_obj.manager.setup_accesspoint(
+                    progress_fn=progress_callback,
+                    no_services=no_services,
+                    no_setup=no_setup,
+                )
+
+            success = start_fn()
+            # Only reached on normal completion of setup_accesspoint
+            if not success:
+                console.print("[red]✗ Failed to start hotspot[/red]")
+                return
+
+            if daemon:
+                statsFn()
+
             progress.update(task, completed=100)
         except KeyboardInterrupt:
             # User aborted — stop cleanly, no "failed" message.
@@ -103,23 +120,14 @@ def hotspot_start(
         except SystemExit as e:
             # Something inside setup_accesspoint (or a subprocess wrapper) called sys.exit().
             code = e.code if e.code is not None else 0
-            if code != 0:
-                progress.update(
-                    task, description="APManager startup exited unexpectedly"
-                )
-                myChannel = cli_obj.config_manager.config.get("channel")
-                console.print(
-                    Panel.fit(
-                        "[bold red]✗ Hotspot failed to start[/bold red]\n\n"
-                        "The startup routine exited before the hotspot came up "
-                        f"(exit code [yellow]{code}[/yellow]).\n"
-                        # "Check the logs, service permissions, and that no other "
-                        # "AP/hostapd/dnsmasq instance is already running.\n"
-                        f"Ensure channel [green]{myChannel}[/green] in config matches wifi interface channel",
-                        title="Startup Failed",
-                    )
-                )
-                raise  # preserve original exit behavior for the caller
+            prevChannel = cli_obj.config_manager.config.get("channel")
+            sysExFn(
+                code,
+                startup_retries,
+                progress_callback,
+                start_fn=start_fn,
+                prevChannel=prevChannel,
+            )
 
         except BaseException as e:
             # Any other BaseException (not Exception) that would otherwise kill the process.
@@ -131,47 +139,6 @@ def hotspot_start(
                 )
             )
             raise
-
-        try:
-            if success:
-                from ap_utils.config import config_manager
-
-                dnsamasq_pid = None
-                hostapd_pid = None
-                try:
-                    with open(config_manager.dnsmasq_pidfile.as_posix(), "r") as f:
-                        dnsamasq_pid = f.read()
-                        dnsamasq_pid = (
-                            dnsamasq_pid.strip() if dnsamasq_pid else dnsamasq_pid
-                        )
-                    with open(config_manager.hostapd_pidfile.as_posix(), "r") as f:
-                        hostapd_pid = f.read()
-                        hostapd_pid = (
-                            hostapd_pid.strip() if hostapd_pid else hostapd_pid
-                        )
-                except Exception:
-                    pass
-                config = config_manager.get_config
-                console.print(
-                    Panel.fit(
-                        "[bold green]✓ Hotspot started successfully![/bold green]\n\n"
-                        f"[cyan]SSID:[/cyan] {config['ssid'] or 'From config'}\n"
-                        f"[cyan]AP Interface[/cyan] {config['vwifi_iface']}\n"
-                        f"[cyan]Net Interface:[/cyan] {config['internet_iface']}\n"
-                        f"[cyan]Sharing Method:[/cyan] {config['share_method']}\n"
-                        f"[cyan]DNSMASQ PID:[/cyan] {dnsamasq_pid or '-'}\n"
-                        f"[cyan]HOSTAPD PID:[/cyan] {hostapd_pid or '-'}\n",
-                        title="AccessPoint Status",
-                    )
-                )
-            # Only reached on normal completion of setup_accesspoint
-            if not success:
-                console.print("[red]✗ Failed to start hotspot[/red]")
-                return
-        except Exception as e:
-            progress.update(task, description="Hotspot process errored")
-            console.print(f"[red]Error: {e}[/red]")
-            return
 
 
 @hotspot.command("stop")

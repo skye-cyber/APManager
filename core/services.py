@@ -23,7 +23,6 @@ class NetServices:
         self.conf_dir = self.config.get("conf_dir", config_manager.__bconfdir__)
         self.subnet = self.config["ip_range"]
         self.dhcp_range = self.get_dhcp_range()
-        self.hostapd_rtries = 0
 
     def __enter__(self):
         self.config = config_manager.get_config
@@ -645,15 +644,7 @@ class NetServices:
             if self.hostapd_pid is not None:
                 print(f"HOSTAPD RUNNING as PID:{fg.CYAN}{self.hostapd_pid}{fg.RESET}")
             else:
-                if self.hostapd_rtries > 2:
-                    sys.exit("Hostapd startup failure")
-                self.hostapd_rtries += 1
-                channel = shared.get_current_channel()
-                progress_fn(
-                    f"[Retry] {fg.BGREEN}Channel {channel}{fg.RESET}"
-                ) if progress_fn else print("[Retry] Channel", channel)
-                config_manager.set("channel", channel)
-                return self.start_hostapd(progress_fn)
+                sys.exit("Hostapd startup failure")
 
             # Success - hostapd is running in background
             print(f"{fg.GREEN}Hostapd started successfully{fg.RESET}")
